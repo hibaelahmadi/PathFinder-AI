@@ -1,4 +1,5 @@
 
+from explanations import generate_explanations
 from scoring import calculate_score
 
 
@@ -15,7 +16,8 @@ def rank_programs(student, programs, top_n=5):
 
         recommendation = {
             "program": program["name"],
-            "score": score
+            "score": score,
+            "explanations": generate_explanations(student, program)
         }
 
         recommendations.append(recommendation)
