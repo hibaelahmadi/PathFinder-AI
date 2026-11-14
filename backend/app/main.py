@@ -10,6 +10,7 @@ from app.api.admission_criteria import router as admission_criteria_router
 from app.api.sources import router as sources_router
 from app.api.auth import router as auth_router
 from app.api.profiles import router as profiles_router
+from app.api.sessions import router as sessions_router
 
 
 app = FastAPI(
@@ -25,6 +26,7 @@ app.include_router(admission_criteria_router)
 app.include_router(sources_router)
 app.include_router(auth_router)
 app.include_router(profiles_router)
+app.include_router(sessions_router)
 
 
 @app.get("/health")

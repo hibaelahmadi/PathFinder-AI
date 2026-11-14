@@ -75,9 +75,8 @@ Press Ctrl+C in the terminal to stop the server.
 - Registration, login, and current-user endpoints are implemented and manually verified.
 - Student profile creation, reading, and partial updates are implemented
   with access restricted to the authenticated owner.
-- Questionnaire sessions and chatbot/recommendation integration
-  are not implemented yet.
-
+- Questionnaire session creation and owner-protected reading are implemented.
+- Answer submission and chatbot/recommendation integration remain pending.
 ## Run tests
 
 From the backend folder, install the development dependencies:
@@ -219,3 +218,21 @@ amounts in MAD. Clients cannot supply user_id.
 
 Profile creation, partial updates, validation, and isolation between
 two accounts were manually verified through the local API.
+
+## Questionnaire sessions
+
+Authentication is required.
+
+- POST /sessions creates an empty, in-progress session.
+- GET /sessions lists the authenticated user's sessions.
+- GET /sessions/{session_id} retrieves an owned session.
+- GET /sessions/{session_id}/answers lists its saved answers.
+
+List endpoints support offset and limit.
+Other users' sessions return 404; unauthenticated requests return 401.
+
+Session creation, retrieval, ownership isolation, and pagination
+validation were verified through the local API.
+
+Answer submission, questionnaire progression, confirmation, and
+reopening are pending integration with Person 3's module.
