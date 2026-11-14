@@ -1,11 +1,19 @@
 from logging.config import fileConfig
 
-from app.db.session import database_url, engine
-from app.db.base import Base
-from app.models.user import User
-
-
 from alembic import context
+
+from app.db.base import Base
+from app.db.session import database_url, engine
+from app.models.admission_criterion import AdmissionCriterion
+from app.models.admission_criterion_source import AdmissionCriterionSource
+from app.models.campus import Campus
+from app.models.career import Career
+from app.models.institution import Institution
+from app.models.program import Program
+from app.models.program_career import ProgramCareer
+from app.models.program_source import ProgramSource
+from app.models.source import Source
+from app.models.user import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
