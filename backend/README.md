@@ -73,8 +73,10 @@ Press Ctrl+C in the terminal to stop the server.
   programs, careers, admission criteria, and official sources.
 - Catalogue lists support pagination and resource-specific filters.
 - Registration, login, and current-user endpoints are implemented and manually verified.
-- Student profiles, questionnaire sessions, and chatbot/recommendation
-  integration are not implemented yet.
+- Student profile creation, reading, and partial updates are implemented
+  with access restricted to the authenticated owner.
+- Questionnaire sessions and chatbot/recommendation integration
+  are not implemented yet.
 
 ## Run tests
 
@@ -200,3 +202,20 @@ Authorization: Bearer <access_token>
 
 Access tokens expire after the configured lifetime.
 Invalid credentials and disabled accounts are rejected.
+
+## Student profiles
+
+Authentication is required.
+
+- GET /profiles/me returns the logged-in account's profile.
+  Returns 404 if no profile exists.
+- PATCH /profiles/me creates or partially updates that profile.
+
+Omitted fields remain unchanged. Explicit null clears a field.
+Lists and grades dictionaries are replaced rather than merged.
+
+Grades must be between 0 and 20. Annual budgets are nonnegative
+amounts in MAD. Clients cannot supply user_id.
+
+Profile creation, partial updates, validation, and isolation between
+two accounts were manually verified through the local API.

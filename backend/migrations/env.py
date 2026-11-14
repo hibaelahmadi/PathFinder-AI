@@ -14,6 +14,7 @@ from app.models.program_career import ProgramCareer
 from app.models.program_source import ProgramSource
 from app.models.source import Source
 from app.models.user import User
+from app.models.student_profile import StudentProfile
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
