@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from questionnaire import choisir_question_interets
 print("Bienvenue dans PathFinder AI !")
 print("Pour ce test, utilise des réponses fictives.\n")
 
@@ -7,24 +8,8 @@ bac = input("Quelle est ta série de bac ? ")
 ville = input("Dans quelle ville souhaites-tu étudier ? ")
 interets = input("Quelles matières ou activités aimes-tu ? ")
 
-# On met la réponse en minuscules pour faciliter la recherche.
-texte = interets.lower()
-
-# On choisit une question selon les mots présents dans la réponse.
-if "informatique" in texte:
-    question = (
-        "Qu'est-ce qui t'attire en informatique : "
-        "programmation, réseaux, données ou autre ? "
-    )
-elif "biologie" in texte:
-    question = (
-        "Qu'est-ce qui t'attire en biologie : "
-        "santé, recherche, environnement ou autre ? "
-    )
-else:
-    question = "Peux-tu donner un exemple d'activité que tu aimes ? "
-
-precision = input(question)
+question = choisir_question_interets(interets)
+precision = input(question).strip() or None
 # On accepte uniquement les réponses prévues.
 while True:
     mobilite = input(
@@ -158,26 +143,8 @@ while True:
 
         # Une modification des intérêts déclenche une nouvelle précision.
         if cle == "interets":
-            texte = (profil["interets"] or "").lower()
-
-            if "informatique" in texte:
-                question = (
-                    "Qu'est-ce qui t'attire en informatique : "
-                    "programmation, réseaux, données ou autre ? "
-                )
-            elif "biologie" in texte:
-                question = (
-                    "Qu'est-ce qui t'attire en biologie : "
-                    "santé, recherche, environnement ou autre ? "
-                )
-            else:
-                question = (
-                    "Peux-tu préciser une activité que tu aimes ? "
-                    "Entrée pour passer : "
-                )
-
+            question = choisir_question_interets(profil["interets"])
             profil["precision_interets"] = input(question).strip() or None
-        # Sauvegarde après confirmation du profil.
 chemin = Path(__file__).resolve().parent / "profil_test.json"
 
 try:
