@@ -44,7 +44,8 @@ Press Ctrl+C in the terminal to stop the server.
 - GET /health returns {"status": "ok"}.
 - PostgreSQL users and catalogue tables are configured through Alembic migrations.
 - Catalogue tables cover institutions, campuses, programs, careers, official sources, admission criteria, and their links.
-- Authentication and catalogue API endpoints are not implemented yet.
+- Institution list and detail endpoints are available.
+- Other catalogue endpoints and authentication are not implemented yet.
 
 ## Run tests
 
@@ -126,3 +127,26 @@ finally {
 
 Database tests are skipped unless `RUN_DB_TESTS=1`.
 Each test rolls back its changes; sequence counters may still advance.
+
+## Catalogue API
+
+Each resource supports GET listing and lookup by numeric ID:
+
+| Resource | List endpoint | Optional filters |
+|---|---|---|
+| Institutions | /institutions | None |
+| Campuses | /campuses | institution_id |
+| Programs | /programs | campus_id, institution_id, field |
+| Careers | /careers | program_id |
+| Admission criteria | /admission-criteria | program_id, academic_year, campaign, verification_status |
+| Sources | /sources | program_id, criterion_id |
+
+All lists accept offset (default 0) and limit (default 20, maximum 100).
+Filters combine with AND. Empty results return [].
+Missing individual records return 404; invalid parameters return 422.
+
+Annual tuition is expressed in MAD and serialized as a decimal string.
+Unknown values are returned as null.
+
+Program source filtering returns direct program-source links;
+admission evidence is retrieved using criterion_id.
