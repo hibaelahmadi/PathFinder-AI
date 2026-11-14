@@ -6,6 +6,32 @@ Backend API built with FastAPI.
 
 - Python 3.12 or newer
 
+## Local configuration
+
+Create a virtual environment and install dependencies as described
+in Setup, then copy `.env.example` to `.env` inside `backend`.
+
+Configure your local PostgreSQL credentials in `.env`.
+
+From the backend folder, generate a private token-signing secret:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Copy the generated value into `.env`:
+
+```dotenv
+JWT_SECRET_KEY="your_generated_secret"
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+Keep the generated secret private. Never commit `.env`.
+The placeholder in `.env.example` must be replaced locally.
+
+Database migration commands also load these settings, so configure
+the signing secret before running Alembic.
+
 ## Setup
 
 From the project root, enter the backend folder:
@@ -41,11 +67,14 @@ Press Ctrl+C in the terminal to stop the server.
 
 ## Current functionality
 
-- GET /health returns {"status": "ok"}.
-- PostgreSQL users and catalogue tables are configured through Alembic migrations.
-- Catalogue tables cover institutions, campuses, programs, careers, official sources, admission criteria, and their links.
-- Institution list and detail endpoints are available.
-- Other catalogue endpoints and authentication are not implemented yet.
+- GET /health checks that the API responds.
+- PostgreSQL tables are managed through Alembic migrations.
+- Catalogue list and detail endpoints cover institutions, campuses,
+  programs, careers, admission criteria, and official sources.
+- Catalogue lists support pagination and resource-specific filters.
+- Registration, login, and current-user endpoints are implemented and manually verified.
+- Student profiles, questionnaire sessions, and chatbot/recommendation
+  integration are not implemented yet.
 
 ## Run tests
 
@@ -150,3 +179,24 @@ Unknown values are returned as null.
 
 Program source filtering returns direct program-source links;
 admission evidence is retrieved using criterion_id.
+
+## Authentication API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | /auth/register | Create a student account |
+| POST | /auth/login | Return a bearer access token |
+| GET | /auth/me | Return the authenticated account |
+
+Registration and login accept JSON containing email and password.
+Passwords must contain 15–128 characters. Email addresses are
+normalized to lowercase.
+
+Registration does not accept a role; new accounts are students.
+Responses never include password hashes.
+
+For protected requests, send:
+Authorization: Bearer <access_token>
+
+Access tokens expire after the configured lifetime.
+Invalid credentials and disabled accounts are rejected.
