@@ -42,7 +42,8 @@ Press Ctrl+C in the terminal to stop the server.
 ## Current functionality
 
 - GET /health returns {"status": "ok"}.
-- Database integration and authentication are not implemented yet.
+- PostgreSQL connection and the initial users table are configured.
+- Authentication endpoints are not implemented yet.
 
 ## Run tests
 
@@ -56,4 +57,32 @@ Run the tests:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
+```
+
+## Database setup
+
+Install PostgreSQL and create a login role named `pathfinder_app`
+with a private password.
+
+Create a database named `pathfinder_db` owned by `pathfinder_app`.
+
+Copy `.env.example` to `.env` and set your local database credentials.
+Never commit `.env`.
+
+From the backend folder, apply the existing migrations:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+Check the applied revision:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic current
+```
+
+Check whether the database matches the models:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic check
 ```
