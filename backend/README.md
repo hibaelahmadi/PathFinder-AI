@@ -44,7 +44,8 @@ Press Ctrl+C in the terminal to stop the server.
 - GET /health returns {"status": "ok"}.
 - PostgreSQL users and catalogue tables are configured through Alembic migrations.
 - Catalogue tables cover institutions, campuses, programs, careers, official sources, admission criteria, and their links.
-- Authentication and catalogue API endpoints are not implemented yet.
+- Institution list and detail endpoints are available.
+- Other catalogue endpoints and authentication are not implemented yet.
 
 ## Run tests
 
