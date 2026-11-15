@@ -42,3 +42,18 @@ QUESTIONS = {
         "résoudre des problèmes. Tu peux passer avec Entrée. "
     ),
 }
+
+
+def creer_profil():
+    """Prépare un profil vide pour un nouvel entretien."""
+    return {
+        "bac": None,
+        "ville_souhaitee": None,
+        "interets": None,
+        "precision_interets": None,
+        "mobilite": None,
+        "autres_villes": None,
+        "objectif": None,
+        "competences_declarees": None,
+        "confirme": False,
+    }

@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from questionnaire import choisir_question_interets, QUESTIONS
+from questionnaire import choisir_question_interets, QUESTIONS, creer_profil
 
 
 print("Bienvenue dans PathFinder AI !")
@@ -33,7 +33,9 @@ elif mobilite == "je ne sais pas":
 objectif = input(QUESTIONS["objectif"]).strip() or None
 competences = input(QUESTIONS["competences_declarees"]).strip() or None
 
-profil = {
+profil = creer_profil()
+
+profil.update({
     "bac": bac,
     "ville_souhaitee": ville,
     "interets": interets,
@@ -42,7 +44,7 @@ profil = {
     "autres_villes": villes_possibles,
     "objectif": objectif,
     "competences_declarees": competences,
-}
+})
 
 # Associe chaque numéro au champ à modifier.
 champs = {
