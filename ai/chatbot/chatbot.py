@@ -4,6 +4,7 @@ from questionnaire import (
     choisir_question_interets,
     QUESTIONS,
     creer_profil,
+    corriger_reponse,
     prochaine_question,
     traiter_reponse,
 )
@@ -12,22 +13,23 @@ from questionnaire import (
 print("Bienvenue dans PathFinder AI !")
 print("Pour ce test, utilise des réponses fictives.\n")
 
-# Un champ absent reste à demander ; une réponse vide est déjà traitée.
-reponses = {}
+def completer_questionnaire(reponses):
+    """Pose dans le terminal les questions restant à traiter."""
+    question = prochaine_question(reponses)
+    while question is not None:
+        reponse = input(question["question_text"])
+        resultat = traiter_reponse(reponses, question["question_code"], reponse)
 
-question = prochaine_question(reponses)
-while question is not None:
-    reponse = input(question["question_text"])
-    resultat = traiter_reponse(reponses, question["question_code"], reponse)
+        for erreur in resultat["errors"]:
+            print(erreur)
 
-    for erreur in resultat["errors"]:
-        print(erreur)
+        reponses = resultat["reponses"]
+        question = resultat["next_question"]
 
-    reponses = resultat["reponses"]
-    question = resultat["next_question"]
+    return reponses
 
-profil = creer_profil()
-profil.update(reponses)
+
+reponses = completer_questionnaire({})
 
 # Associe chaque numéro au champ à modifier.
 champs = {
@@ -42,6 +44,8 @@ champs = {
 }
 
 while True:
+    profil = creer_profil()
+    profil.update(reponses)
     print("\n--- Profil à vérifier ---")
 
     for numero, (cle, titre) in champs.items():
@@ -74,42 +78,21 @@ while True:
 
     cle, titre = champs[choix]
 
-    # Modifier la mobilité implique de revoir les autres villes.
-    if cle == "mobilite":
-        while True:
-            reponse = input(QUESTIONS["mobilite"]).strip().lower()
-
-            if reponse in ["oui", "non", "je ne sais pas"]:
-                break
-
-            print("Écris oui, non ou je ne sais pas.")
-
-        profil["mobilite"] = reponse
-        profil["autres_villes"] = None
-
-        if reponse == "oui":
-            profil["autres_villes"] = (
-                input(QUESTIONS["autres_villes"]).strip() or None
-            )
-
-    elif cle == "autres_villes" and profil["mobilite"] != "oui":
-        print("Pour ajouter des villes, corrige d'abord la mobilité.")
-
+    if cle == "precision_interets":
+        question = choisir_question_interets(reponses.get("interets"))
     else:
-        # La précision des intérêts dépend des intérêts actuels.
-        if cle == "precision_interets":
-            question = choisir_question_interets(profil["interets"])
-        else:
-            question = QUESTIONS[cle]
+        question = QUESTIONS[cle]
 
-        print(f"\nCorrection : {titre}")
-        print("Appuie sur Entrée pour laisser ce champ vide.")
-        profil[cle] = input(question).strip() or None
+    print(f"\nCorrection : {titre}")
+    print("Appuie sur Entrée pour laisser ce champ vide.")
+    resultat = corriger_reponse(reponses, cle, input(question))
 
-        # Modifier les intérêts remplace aussi leur ancienne précision.
-        if cle == "interets":
-            question = choisir_question_interets(profil["interets"])
-            profil["precision_interets"] = input(question).strip() or None
+    for erreur in resultat["errors"]:
+        print(erreur)
+
+    reponses = resultat["reponses"]
+    if not resultat["errors"]:
+        reponses = completer_questionnaire(reponses)
 
 chemin = Path(__file__).resolve().parent / "profil_test.json"
 

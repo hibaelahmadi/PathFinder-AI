@@ -93,6 +93,21 @@ def prochaine_question(reponses):
     return None
 
 
+def _valider_reponse(question_code, answer_text):
+    """Normalise une réponse et renvoie sa valeur et les erreurs éventuelles."""
+    if not isinstance(answer_text, str):
+        return None, ["La réponse doit être une chaîne de caractères."]
+
+    valeur = answer_text.strip()
+    if question_code == "mobilite":
+        valeur = valeur.lower()
+        if valeur not in ("oui", "non", "je ne sais pas"):
+            return None, ["Écris oui, non ou je ne sais pas."]
+    else:
+        valeur = valeur or None
+    return valeur, []
+
+
 def traiter_reponse(reponses, question_code, answer_text):
     """Valide la réponse attendue et renvoie un nouvel état du questionnaire."""
     actualisees = reponses.copy()
@@ -104,19 +119,11 @@ def traiter_reponse(reponses, question_code, answer_text):
     elif question_code != question["question_code"]:
         errors.append("Le code ne correspond pas à la question attendue.")
 
-    if not isinstance(answer_text, str):
-        errors.append("La réponse doit être une chaîne de caractères.")
-    elif not errors:
-        valeur = answer_text.strip()
-        if question_code == "mobilite":
-            valeur = valeur.lower()
-            if valeur not in ("oui", "non", "je ne sais pas"):
-                errors.append("Écris oui, non ou je ne sais pas.")
-        else:
-            valeur = valeur or None
+    valeur, erreurs_validation = _valider_reponse(question_code, answer_text)
+    errors.extend(erreurs_validation)
 
-        if not errors:
-            actualisees[question_code] = valeur
+    if not errors:
+        actualisees[question_code] = valeur
 
     suivante = prochaine_question(actualisees)
     return {
@@ -124,4 +131,43 @@ def traiter_reponse(reponses, question_code, answer_text):
         "next_question": suivante,
         "ready_for_confirmation": suivante is None,
         "errors": errors,
+    }
+
+
+def corriger_reponse(reponses, question_code, answer_text):
+    """Corrige une réponse traitée et invalide ses dépendances si elle change."""
+    actualisees = reponses.copy()
+    errors = []
+    supprimees = []
+
+    if question_code not in QUESTIONS and question_code != "precision_interets":
+        errors.append("Le code ne correspond pas à une question du questionnaire.")
+    elif question_code not in reponses:
+        errors.append("Cette question n'a pas encore été traitée.")
+
+    if question_code == "autres_villes" and reponses.get("mobilite") != "oui":
+        errors.append("Les autres villes nécessitent une mobilité acceptée.")
+
+    valeur, erreurs_validation = _valider_reponse(question_code, answer_text)
+    errors.extend(erreurs_validation)
+
+    if not errors:
+        actualisees[question_code] = valeur
+        if valeur != reponses[question_code]:
+            dependances = {
+                "interets": "precision_interets",
+                "mobilite": "autres_villes",
+            }
+            dependante = dependances.get(question_code)
+            if dependante in actualisees:
+                del actualisees[dependante]
+                supprimees.append(dependante)
+
+    suivante = prochaine_question(actualisees)
+    return {
+        "reponses": actualisees,
+        "next_question": suivante,
+        "ready_for_confirmation": suivante is None,
+        "errors": errors,
+        "answer_codes_to_delete": supprimees,
     }
