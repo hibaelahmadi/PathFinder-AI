@@ -91,3 +91,37 @@ def prochaine_question(reponses):
         }
 
     return None
+
+
+def traiter_reponse(reponses, question_code, answer_text):
+    """Valide la réponse attendue et renvoie un nouvel état du questionnaire."""
+    actualisees = reponses.copy()
+    question = prochaine_question(reponses)
+    errors = []
+
+    if question is None:
+        errors.append("Toutes les questions ont déjà été traitées.")
+    elif question_code != question["question_code"]:
+        errors.append("Le code ne correspond pas à la question attendue.")
+
+    if not isinstance(answer_text, str):
+        errors.append("La réponse doit être une chaîne de caractères.")
+    elif not errors:
+        valeur = answer_text.strip()
+        if question_code == "mobilite":
+            valeur = valeur.lower()
+            if valeur not in ("oui", "non", "je ne sais pas"):
+                errors.append("Écris oui, non ou je ne sais pas.")
+        else:
+            valeur = valeur or None
+
+        if not errors:
+            actualisees[question_code] = valeur
+
+    suivante = prochaine_question(actualisees)
+    return {
+        "reponses": actualisees,
+        "next_question": suivante,
+        "ready_for_confirmation": suivante is None,
+        "errors": errors,
+    }

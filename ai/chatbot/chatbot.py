@@ -5,6 +5,7 @@ from questionnaire import (
     QUESTIONS,
     creer_profil,
     prochaine_question,
+    traiter_reponse,
 )
 
 
@@ -14,23 +15,16 @@ print("Pour ce test, utilise des réponses fictives.\n")
 # Un champ absent reste à demander ; une réponse vide est déjà traitée.
 reponses = {}
 
-while True:
-    question = prochaine_question(reponses)
-    if question is None:
-        break
+question = prochaine_question(reponses)
+while question is not None:
+    reponse = input(question["question_text"])
+    resultat = traiter_reponse(reponses, question["question_code"], reponse)
 
-    cle = question["question_code"]
-    reponse = input(question["question_text"]).strip()
+    for erreur in resultat["errors"]:
+        print(erreur)
 
-    if cle == "mobilite":
-        reponse = reponse.lower()
-        if reponse not in ["oui", "non", "je ne sais pas"]:
-            print("Écris oui, non ou je ne sais pas.")
-            continue
-        if reponse == "je ne sais pas":
-            print("D'accord, ta mobilité reste à préciser.")
-
-    reponses[cle] = reponse or None
+    reponses = resultat["reponses"]
+    question = resultat["next_question"]
 
 profil = creer_profil()
 profil.update(reponses)
