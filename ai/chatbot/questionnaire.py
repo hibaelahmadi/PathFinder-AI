@@ -57,3 +57,37 @@ def creer_profil():
         "competences_declarees": None,
         "confirme": False,
     }
+def prochaine_question(reponses):
+    """Renvoie la prochaine question, ou None si le résumé est prêt."""
+    ordre = [
+        "bac",
+        "ville_souhaitee",
+        "interets",
+        "precision_interets",
+        "mobilite",
+        "autres_villes",
+        "objectif",
+        "competences_declarees",
+    ]
+
+    for code in ordre:
+        # On demande les autres villes seulement si la mobilité est acceptée.
+        if code == "autres_villes":
+            if reponses.get("mobilite") != "oui":
+                continue
+
+        # Un champ présent a déjà été traité, même si sa réponse est vide.
+        if code in reponses:
+            continue
+
+        if code == "precision_interets":
+            texte = choisir_question_interets(reponses.get("interets"))
+        else:
+            texte = QUESTIONS[code]
+
+        return {
+            "question_code": code,
+            "question_text": texte,
+        }
+
+    return None

@@ -1,50 +1,39 @@
 import json
 from pathlib import Path
-from questionnaire import choisir_question_interets, QUESTIONS, creer_profil
+from questionnaire import (
+    choisir_question_interets,
+    QUESTIONS,
+    creer_profil,
+    prochaine_question,
+)
 
 
 print("Bienvenue dans PathFinder AI !")
 print("Pour ce test, utilise des réponses fictives.\n")
 
-bac = input(QUESTIONS["bac"]).strip() or None
-ville = input(QUESTIONS["ville_souhaitee"]).strip() or None
-interets = input(QUESTIONS["interets"]).strip() or None
+# Un champ absent reste à demander ; une réponse vide est déjà traitée.
+reponses = {}
 
-question = choisir_question_interets(interets)
-precision = input(question).strip() or None
-
-# On accepte uniquement les réponses prévues.
 while True:
-    mobilite = input(QUESTIONS["mobilite"]).strip().lower()
-
-    if mobilite in ["oui", "non", "je ne sais pas"]:
+    question = prochaine_question(reponses)
+    if question is None:
         break
 
-    print("Écris oui, non ou je ne sais pas.")
+    cle = question["question_code"]
+    reponse = input(question["question_text"]).strip()
 
-# La question suivante dépend de la mobilité.
-villes_possibles = None
+    if cle == "mobilite":
+        reponse = reponse.lower()
+        if reponse not in ["oui", "non", "je ne sais pas"]:
+            print("Écris oui, non ou je ne sais pas.")
+            continue
+        if reponse == "je ne sais pas":
+            print("D'accord, ta mobilité reste à préciser.")
 
-if mobilite == "oui":
-    villes_possibles = input(QUESTIONS["autres_villes"]).strip() or None
-elif mobilite == "je ne sais pas":
-    print("D'accord, ta mobilité reste à préciser.")
-
-objectif = input(QUESTIONS["objectif"]).strip() or None
-competences = input(QUESTIONS["competences_declarees"]).strip() or None
+    reponses[cle] = reponse or None
 
 profil = creer_profil()
-
-profil.update({
-    "bac": bac,
-    "ville_souhaitee": ville,
-    "interets": interets,
-    "precision_interets": precision,
-    "mobilite": mobilite,
-    "autres_villes": villes_possibles,
-    "objectif": objectif,
-    "competences_declarees": competences,
-})
+profil.update(reponses)
 
 # Associe chaque numéro au champ à modifier.
 champs = {
