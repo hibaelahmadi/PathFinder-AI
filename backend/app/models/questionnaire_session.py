@@ -27,7 +27,7 @@ class QuestionnaireSession(Base):
         server_default="in_progress",
     )
     expected_question_code: Mapped[str | None] = mapped_column(String(100))
-    profile: Mapped[dict[str, str | None] | None] = mapped_column(
+    profile: Mapped[dict[str, str | bool | None] | None] = mapped_column(
         JSONB(none_as_null=True)
     )
     profile_confirmed: Mapped[bool] = mapped_column(

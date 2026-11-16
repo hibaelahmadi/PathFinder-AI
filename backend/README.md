@@ -76,7 +76,9 @@ Press Ctrl+C in the terminal to stop the server.
 - Student profile creation, reading, and partial updates are implemented
   with access restricted to the authenticated owner.
 - Questionnaire session creation and owner-protected reading are implemented.
-- Answer submission and chatbot/recommendation integration remain pending.
+- Questionnaire answers, corrections, confirmation, and reopening are connected
+  to Person 3's questionnaire module.
+- Recommendation engine integration remains pending.
 ## Run tests
 
 From the backend folder, install the development dependencies:
@@ -223,10 +225,14 @@ two accounts were manually verified through the local API.
 
 Authentication is required.
 
-- POST /sessions creates an empty, in-progress session.
+- POST /sessions starts an in-progress questionnaire and returns its first
+  expected question code.
 - GET /sessions lists the authenticated user's sessions.
 - GET /sessions/{session_id} retrieves an owned session.
 - GET /sessions/{session_id}/answers lists its saved answers.
+- GET /sessions/{session_id}/state returns the saved questionnaire state,
+  next question, profile snapshot, and confirmation flag for resuming a session.
+- POST /sessions/{session_id}/actions processes a questionnaire action.
 
 List endpoints support offset and limit.
 Other users' sessions return 404; unauthenticated requests return 401.
@@ -234,5 +240,48 @@ Other users' sessions return 404; unauthenticated requests return 401.
 Session creation, retrieval, ownership isolation, and pagination
 validation were verified through the local API.
 
-Answer submission, questionnaire progression, confirmation, and
-reopening are pending integration with Person 3's module.
+After pulling these changes, reinstall from the backend folder:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+This installs both the backend and `ai.chatbot` from the repository, allowing
+the usual backend-folder launch command to import the questionnaire module.
+
+Example action body:
+
+```json
+{
+  "action": "answer",
+  "reponse": {
+    "question_code": "bac",
+    "answer_text": "Sciences mathématiques"
+  }
+}
+```
+
+Supported actions are `start`, `answer`, `correct`, `confirm`, and `reopen`.
+Only `answer` and `correct` accept a `reponse`; both require it.
+Optional `question_text` and `answer_value` metadata are accepted, but the
+questionnaire module recalculates them from the original answer text.
+Blank answers are supported where the module permits skipping a question.
+Mobility accepts `oui`, `non`, or `je ne sais pas`.
+
+The last answer leaves the session in progress until an explicit `confirm`.
+Reopening clears confirmation, keeps answers, and requires a new confirmation.
+Corrections can remove obsolete dependent answers. Successful actions save
+answer changes and session state atomically. Session row locks serialize
+simultaneous actions. Validation errors return 422 and leave stored data intact.
+
+The returned result follows the module contract, including `etat`,
+`next_question`, answer changes, `profile`, `profile_confirmed`, and `errors`.
+The session profile contains the module's original fields, including
+`competences_declarees` and boolean `confirme`. Confirmation validates the
+summary and does not guarantee all recommendation inputs are available.
+The normalized `/profiles/me` record is maintained separately until its
+mapping to the questionnaire profile is agreed with Person 5.
+
+The connected flow was verified against `pathfinder_test_db`, including
+skipped answers, confirmation, reopening, dependency deletion, ownership,
+validation rollback, simulated persistence failure, and simultaneous actions.

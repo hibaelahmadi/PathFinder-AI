@@ -26,5 +26,5 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["app", "app.*"]
+where = [".", ".."]
+include = ["app", "app.*", "ai", "ai.chatbot", "ai.chatbot.*"]
