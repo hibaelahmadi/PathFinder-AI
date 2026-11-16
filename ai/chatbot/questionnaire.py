@@ -1,3 +1,6 @@
+from copy import deepcopy
+
+
 def choisir_question_interets(interets):
     """Choisit une question de précision selon les intérêts."""
     texte = (interets or "").strip().lower()
@@ -171,3 +174,123 @@ def corriger_reponse(reponses, question_code, answer_text):
         "errors": errors,
         "answer_codes_to_delete": supprimees,
     }
+
+
+
+def traiter_questionnaire(etat, action, reponse=None):
+    """Adapte synchroniquement le questionnaire à un état échangeable en JSON.
+
+    answers est un dictionnaire indexé par question_code.
+    reponse contient question_code, answer_text et les métadonnées facultatives.
+    Les métadonnées des questions et valeurs structurées sont recalculées.
+    Aucun objet reçu n'est modifié et aucune persistance n'est effectuée.
+    """
+    initial = deepcopy(etat)
+    valeurs = {}
+    entrees = []
+    errors = []
+    status = "in_progress"
+    codes = set(QUESTIONS) | {"precision_interets"}
+
+    if etat is None:
+        if action != "start":
+            errors.append("Un entretien doit être démarré avec start.")
+    elif not isinstance(etat, dict):
+        errors.append("L'état doit être un dictionnaire ou None pour start.")
+    else:
+        status = etat.get("status")
+        if status not in ("in_progress", "completed"):
+            errors.append("Le statut doit être in_progress ou completed.")
+        answers = etat.get("answers")
+        if not isinstance(answers, dict):
+            errors.append("answers doit être un dictionnaire indexé par question_code.")
+        else:
+            for cle, entree in answers.items():
+                if not isinstance(entree, dict):
+                    errors.append("Chaque réponse doit être un dictionnaire.")
+                    continue
+                code = entree.get("question_code")
+                if not isinstance(code, str) or code not in codes:
+                    errors.append("Code de question inconnu dans answers.")
+                    continue
+                if cle != code:
+                    errors.append("La clé de answers doit correspondre à question_code.")
+                    continue
+                valeur, erreurs = _valider_reponse(code, entree.get("answer_text"))
+                errors.extend(erreurs)
+                if not erreurs:
+                    valeurs[code] = valeur
+                    entrees.append({"question_code": code,
+                                    "answer_text": entree["answer_text"]})
+            if "autres_villes" in valeurs and valeurs.get("mobilite") != "oui":
+                errors.append("Les autres villes nécessitent une mobilité acceptée.")
+        if status == "completed" and prochaine_question(valeurs) is not None:
+            errors.append("Un entretien completed doit avoir traité toutes les questions.")
+
+    def texte_question(code):
+        if code == "precision_interets":
+            return choisir_question_interets(valeurs.get("interets"))
+        return QUESTIONS[code]
+
+    def canoniser(entree):
+        code = entree["question_code"]
+        return {"question_code": code, "question_text": texte_question(code),
+                "answer_text": entree["answer_text"], "answer_value": valeurs[code]}
+
+    def resultat(erreurs, sauvegardes=None, suppressions=None):
+        suivante = prochaine_question(valeurs)
+        confirme = status == "completed" and suivante is None and not errors
+        profil = creer_profil()
+        profil.update(valeurs)
+        profil["confirme"] = confirme
+        nouvel_etat = initial if erreurs else {
+            "status": status,
+            "expected_question_code": suivante["question_code"] if suivante else None,
+            "answers": {entree["question_code"]: canoniser(entree) for entree in entrees},
+        }
+        return deepcopy({
+            "etat": nouvel_etat, "next_question": suivante,
+            "answers_to_save": [] if erreurs else (sauvegardes or []),
+            "answer_codes_to_delete": [] if erreurs else (suppressions or []),
+            "profile": profil, "profile_confirmed": confirme,
+            "errors": erreurs,
+        })
+
+    if errors:
+        return resultat(errors)
+    if action not in ("start", "answer", "correct", "confirm", "reopen"):
+        return resultat(["Action inconnue."])
+    if action not in ("answer", "correct") and reponse is not None:
+        return resultat(["Cette action n'accepte pas de réponse."])
+    if action == "start":
+        if entrees or status == "completed":
+            return resultat(["Un entretien existant ne peut pas être réinitialisé."])
+        return resultat([])
+    if action == "reopen":
+        if status != "completed":
+            return resultat(["Seul un entretien completed peut être rouvert."])
+        status = "in_progress"
+        return resultat([])
+    if status == "completed":
+        return resultat(["Rouvre l'entretien avant de répondre ou de le corriger."])
+    if action == "confirm":
+        if prochaine_question(valeurs) is not None:
+            return resultat(["Toutes les questions applicables doivent être traitées."])
+        status = "completed"
+        return resultat([])
+    if not isinstance(reponse, dict):
+        return resultat(["La réponse doit contenir question_code et answer_text."])
+    code = reponse.get("question_code")
+    if not isinstance(code, str):
+        return resultat(["question_code doit être une chaîne de caractères."])
+    fonction = traiter_reponse if action == "answer" else corriger_reponse
+    traitement = fonction(valeurs, code, reponse.get("answer_text"))
+    if traitement["errors"]:
+        return resultat(traitement["errors"])
+    valeurs = traitement["reponses"]
+    supprimees = traitement.get("answer_codes_to_delete", [])
+    entrees = [entree for entree in entrees
+               if entree["question_code"] not in supprimees + [code]]
+    entree = {"question_code": code, "answer_text": reponse["answer_text"]}
+    entrees.append(entree)
+    return resultat([], [canoniser(entree)], supprimees)
