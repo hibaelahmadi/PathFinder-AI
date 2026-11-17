@@ -1,9 +1,38 @@
 import unittest
 
-from ai.chatbot.validation_profil import valider_budget_annuel, valider_note
+from ai.chatbot.validation_profil import (
+    valider_budget_annuel,
+    valider_note,
+    valider_type_etablissement,
+)
 
 
 class ValidationProfilTests(unittest.TestCase):
+    def test_types_etablissement_acceptes(self):
+        for texte, valeur in (
+            ("public", "public"), (" PUBLIC ", "public"),
+            ("privé", "prive"), ("prive", "prive"),
+            (" \tPRIVÉ\n", "prive"), (" PrIvE ", "prive"),
+            ("sans préférence", None), ("sans preference", None),
+            (" SANS PRÉFÉRENCE ", None), (" SANS PREFERENCE ", None),
+            ("", None), (" \t\n ", None),
+        ):
+            with self.subTest(texte=texte):
+                self.assertEqual(
+                    valider_type_etablissement(texte),
+                    {"value": valeur, "errors": []},
+                )
+
+    def test_types_etablissement_refuses(self):
+        for texte in ("autre", "public ou privé", "sans  preference", "0"):
+            with self.subTest(texte=texte):
+                self.assert_invalide(valider_type_etablissement, texte)
+
+    def test_types_etablissement_non_textuels(self):
+        for texte in (None, 0, 12.5, True, [], {}, b"public"):
+            with self.subTest(texte=texte):
+                self.assert_invalide(valider_type_etablissement, texte)
+
     def assert_invalide(self, fonction, texte):
         resultat = fonction(texte)
         self.assertIsNone(resultat["value"])

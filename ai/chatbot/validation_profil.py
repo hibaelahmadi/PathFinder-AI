@@ -36,3 +36,22 @@ def valider_note(texte):
 def valider_budget_annuel(texte):
     """Valide les frais de scolarité seuls, en DH/an, sans plafond imposé."""
     return _valider_nombre(texte)
+
+
+def valider_type_etablissement(texte):
+    """Normalise le type souhaité ; vide et sans préférence donnent None."""
+    if not isinstance(texte, str):
+        return {"value": None, "errors": ["La réponse doit être une chaîne de caractères."]}
+
+    texte = texte.strip().lower()
+    valeurs = {
+        "public": "public",
+        "privé": "prive",
+        "prive": "prive",
+        "sans préférence": None,
+        "sans preference": None,
+        "": None,
+    }
+    if texte not in valeurs:
+        return {"value": None, "errors": ["Écris public, privé ou sans préférence."]}
+    return {"value": valeurs[texte], "errors": []}
