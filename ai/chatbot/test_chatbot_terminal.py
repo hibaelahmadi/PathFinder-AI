@@ -39,6 +39,9 @@ class MobiliteTerminalTests(unittest.TestCase):
             self.assertIsNone(next(valeurs, None), "Réponses de test non consommées")
             profil = json.loads(cible.read_text(encoding="utf-8"))
             self.assertTrue(profil["confirme"])
+            for code in ("notes", "budget_annuel_max", "type_etablissement"):
+                self.assertIn(code, profil)
+                self.assertIsNone(profil[code])
         self.assertEqual(profil_local.read_bytes() if profil_local.exists() else None, avant)
         return profil, etat, prompts, sortie.getvalue(), module.extraire_mobilite
 
