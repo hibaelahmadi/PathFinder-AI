@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from saisie_notes import saisir_notes
 from validation_profil import valider_budget_annuel, valider_type_etablissement
 from questionnaire import (
     choisir_question_interets,
@@ -11,8 +12,6 @@ from questionnaire import (
 )
 
 
-print("Bienvenue dans PathFinder AI !")
-print("Pour ce test, utilise des réponses fictives.\n")
 
 
 def demander_mobilite():
@@ -94,84 +93,106 @@ def completer_questionnaire(reponses):
     return reponses
 
 
-reponses = completer_questionnaire({})
+def main(matieres=None):
+    """Lance le terminal ; sans liste, aucune question de notes n’est posée."""
+    print("Bienvenue dans PathFinder AI !")
+    print("Pour ce test, utilise des réponses fictives.\n")
+    reponses = completer_questionnaire({})
+    if matieres:
+        reponses["notes"] = saisir_notes(matieres)
 
-# Associe chaque numéro au champ à modifier.
-champs = {
-    "1": ("bac", "Série de bac"),
-    "2": ("ville_souhaitee", "Ville souhaitée"),
-    "3": ("interets", "Intérêts"),
-    "4": ("precision_interets", "Précision des intérêts"),
-    "5": ("mobilite", "Mobilité"),
-    "6": ("autres_villes", "Autres villes"),
-    "7": ("objectif", "Objectif"),
-    "8": ("competences_declarees", "Compétences déclarées"),
-    "9": ("budget_annuel_max", "Budget annuel maximal de scolarité (DH)"),
-    "10": ("type_etablissement", "Type d'établissement"),
-}
+    # Associe chaque numéro au champ à modifier.
+    champs = {
+        "1": ("bac", "Série de bac"),
+        "2": ("ville_souhaitee", "Ville souhaitée"),
+        "3": ("interets", "Intérêts"),
+        "4": ("precision_interets", "Précision des intérêts"),
+        "5": ("mobilite", "Mobilité"),
+        "6": ("autres_villes", "Autres villes"),
+        "7": ("objectif", "Objectif"),
+        "8": ("competences_declarees", "Compétences déclarées"),
+        "9": ("budget_annuel_max", "Budget annuel maximal de scolarité (DH)"),
+        "10": ("type_etablissement", "Type d'établissement"),
+    }
 
-while True:
-    profil = creer_profil()
-    profil.update(reponses)
-    print("\n--- Profil à vérifier ---")
+    if matieres:
+        champs["11"] = ("notes", "Notes par matière sur 20")
 
-    for numero, (cle, titre) in champs.items():
-        valeur = profil[cle]
-        print(
-            f"{numero}. {titre} :",
-            valeur if valeur is not None else "Non renseigné",
-        )
+    while True:
+        profil = creer_profil()
+        profil.update(reponses)
+        print("\n--- Profil à vérifier ---")
 
-    confirmation = input(
-        "\nCe résumé est-il correct ? (oui / non) "
-    ).strip().lower()
+        for numero, (cle, titre) in champs.items():
+            valeur = profil[cle]
+            print(
+                f"{numero}. {titre} :",
+                valeur if valeur is not None else "Non renseigné",
+            )
 
-    if confirmation == "oui":
-        profil["confirme"] = True
-        print("Ton profil est confirmé.")
-        break
+        confirmation = input(
+            "\nCe résumé est-il correct ? (oui / non) "
+        ).strip().lower()
 
-    if confirmation != "non":
-        print("Écris oui ou non.")
-        continue
+        if confirmation == "oui":
+            profil["confirme"] = True
+            print("Ton profil est confirmé.")
+            break
 
-    choix = input(
-        "Quel champ souhaites-tu corriger ? (numéro de 1 à 10) "
-    ).strip()
+        if confirmation != "non":
+            print("Écris oui ou non.")
+            continue
 
-    if choix not in champs:
-        print("Choisis un numéro entre 1 et 10.")
-        continue
+        choix = input(
+            f"Quel champ souhaites-tu corriger ? (numéro de 1 à {len(champs)}) "
+        ).strip()
 
-    cle, titre = champs[choix]
+        if choix not in champs:
+            print(f"Choisis un numéro entre 1 et {len(champs)}.")
+            continue
 
-    if cle == "precision_interets":
-        question = choisir_question_interets(reponses.get("interets"))
-    else:
-        question = QUESTIONS[cle]
+        cle, titre = champs[choix]
 
-    print(f"\nCorrection : {titre}")
-    print("Appuie sur Entrée pour laisser ce champ vide.")
-    if cle in VALIDATIONS_TERMINAL:
-        reponses[cle] = demander_champ_valide(cle)
-        continue
-    reponse = demander_mobilite() if cle == "mobilite" else input(question)
-    resultat = corriger_reponse(reponses, cle, reponse)
+        if cle == "notes":
+            reponses["notes"] = saisir_notes(
+                matieres, reponses.get("notes"), correction=True
+            )
+            continue
 
-    for erreur in resultat["errors"]:
-        print(erreur)
+        if cle == "precision_interets":
+            question = choisir_question_interets(reponses.get("interets"))
+        else:
+            question = QUESTIONS[cle]
 
-    reponses = resultat["reponses"]
-    if not resultat["errors"]:
-        reponses = completer_questionnaire(reponses)
+        print(f"\nCorrection : {titre}")
+        print("Appuie sur Entrée pour laisser ce champ vide.")
+        if cle in VALIDATIONS_TERMINAL:
+            reponses[cle] = demander_champ_valide(cle)
+            continue
+        reponse = demander_mobilite() if cle == "mobilite" else input(question)
+        resultat = corriger_reponse(reponses, cle, reponse)
 
-chemin = Path(__file__).resolve().parent / "profil_test.json"
+        for erreur in resultat["errors"]:
+            print(erreur)
 
-try:
-    with chemin.open("w", encoding="utf-8") as fichier:
-        json.dump(profil, fichier, ensure_ascii=False, indent=4)
+        reponses = resultat["reponses"]
+        if not resultat["errors"]:
+            reponses = completer_questionnaire(reponses)
 
-    print(f"\nProfil sauvegardé dans : {chemin}")
+    chemin = Path(__file__).resolve().parent / "profil_test.json"
 
-except OSError as erreur:
-    print(f"\nImpossible de sauvegarder le profil : {erreur}")
+    try:
+        with chemin.open("w", encoding="utf-8") as fichier:
+            json.dump(profil, fichier, ensure_ascii=False, indent=4)
+
+        print(f"\nProfil sauvegardé dans : {chemin}")
+
+    except OSError as erreur:
+        print(f"\nImpossible de sauvegarder le profil : {erreur}")
+
+    return {"profil": profil, "reponses": reponses}
+
+
+if __name__ == "__main__":
+    resultat_terminal = main()
+    reponses = resultat_terminal["reponses"]

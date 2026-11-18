@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 class MobiliteTerminalTests(unittest.TestCase):
     def parcours(self, mobilite, corrections=(), extraction=None, erreur=None,
-                 champs_prepares=("", "")):
+                 champs_prepares=("", ""), matieres=None, notes_saisies=()):
         source = Path(__file__).with_name("chatbot.py")
         profil_local = source.with_name("profil_test.json")
         avant = profil_local.read_bytes() if profil_local.exists() else None
@@ -20,7 +20,7 @@ class MobiliteTerminalTests(unittest.TestCase):
         module.extraire_mobilite = Mock(return_value=extraction, side_effect=erreur)
         valeurs = iter(["Sciences", "Rabat", "informatique", "programmation",
                         *mobilite, "ingénierie", "", *champs_prepares,
-                        *corrections, "oui"])
+                        *notes_saisies, *corrections, "oui"])
         prompts = []
         sortie = io.StringIO()
         with tempfile.TemporaryDirectory(prefix="pathfinder-terminal-") as tmp:
@@ -37,13 +37,51 @@ class MobiliteTerminalTests(unittest.TestCase):
                     patch.object(sys, "path", [str(source.parent), *sys.path]), \
                     patch("builtins.input", side_effect=repondre), \
                     contextlib.redirect_stdout(sortie):
-                etat = runpy.run_path(str(script), run_name="__main__")
+                if matieres is None:
+                    etat = runpy.run_path(str(script), run_name="__main__")
+                else:
+                    terminal = runpy.run_path(str(script), run_name="terminal_test")
+                    etat = terminal["main"](matieres)
             self.assertIsNone(next(valeurs, None), "Réponses de test non consommées")
             profil = json.loads(cible.read_text(encoding="utf-8"))
             self.assertTrue(profil["confirme"])
-            self.assertIsNone(profil["notes"])
+            if not matieres:
+                self.assertIsNone(profil["notes"])
         self.assertEqual(profil_local.read_bytes() if profil_local.exists() else None, avant)
         return profil, etat, prompts, sortie.getvalue(), module.extraire_mobilite
+
+    def test_notes_zero_et_matiere_ignoree(self):
+        matieres = ["matiere_fictive_a", "matiere_fictive_b"]
+        profil, _, _, sortie, _ = self.parcours(
+            ["non"], matieres=matieres, notes_saisies=["0", ""],
+        )
+        self.assertEqual(profil["notes"], {"matiere_fictive_a": 0})
+        self.assertIn("11. Notes par matière sur 20", sortie)
+
+    def test_correction_notes_et_entree_conserve(self):
+        profil, _, _, sortie, _ = self.parcours(
+            ["non"], matieres=["matiere_fictive_a", "matiere_fictive_b"],
+            notes_saisies=["0", "12"],
+            corrections=["non", "11", "", "21", "15,5"],
+        )
+        self.assertEqual(profil["notes"], {"matiere_fictive_a": 0, "matiere_fictive_b": 15.5})
+        self.assertIn("Entrée conserve la note", sortie)
+        self.assertIn("effacer", sortie)
+
+    def test_effacer_derniere_note(self):
+        profil, _, _, _, _ = self.parcours(
+            ["non"], matieres=["matiere_fictive_a"], notes_saisies=["0"],
+            corrections=["non", "11", " EFFACER "],
+        )
+        self.assertIsNone(profil["notes"])
+
+    def test_sans_liste_ni_question_ni_menu_notes(self):
+        for matieres in (None, []):
+            with self.subTest(matieres=matieres):
+                profil, _, prompts, sortie, _ = self.parcours(["non"], matieres=matieres)
+                self.assertIsNone(profil["notes"])
+                self.assertFalse(any("Note pour" in p for p in prompts))
+                self.assertNotIn("11. Notes", sortie)
 
     def test_budget_zero_et_correction_type(self):
         profil, _, prompts, sortie, appel = self.parcours(
