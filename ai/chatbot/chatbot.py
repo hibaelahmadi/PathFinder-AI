@@ -71,10 +71,53 @@ def demander_champ_valide(cle):
             print(erreur)
 
 
-def completer_questionnaire(reponses):
+def analyser_interets_terminal(texte, codes):
+    """Aucun échec d'extraction ne doit bloquer le terminal."""
+    try:
+        from interets_gemini import extraire_interets
+        resultat = extraire_interets(texte, codes)
+        if not resultat["errors"]:
+            return resultat
+    except Exception:
+        pass
+    print("Catégories indisponibles ; tu peux continuer avec tes réponses libres.")
+    return None
+
+
+def recueillir_interets(reponses, texte, codes, *, correction=False):
+    fonction = corriger_reponse if correction else traiter_reponse
+    reponses = fonction(reponses, "interets", texte)["reponses"]
+    reponses["interets_texte_original"] = texte
+    reponses["categories_interets"] = None
+    extraction = analyser_interets_terminal(texte, codes)
+    besoin = extraction is not None and extraction["clarification_needed"]
+    question = (extraction["clarification_question"] if besoin
+                else choisir_question_interets(reponses.get("interets")))
+    precision = input(question)
+    fonction_precision = (corriger_reponse if "precision_interets" in reponses
+                          else traiter_reponse)
+    reponses = fonction_precision(reponses, "precision_interets", precision)["reponses"]
+    reponses["precision_interets_texte_original"] = precision
+    if besoin:
+        # Une seule relance : si l'analyse combinée reste vague, continuer.
+        extraction = analyser_interets_terminal(
+            f"Réponse initiale : {texte}\nPrécision : {precision}", codes
+        )
+    if extraction is not None and not extraction["clarification_needed"]:
+        reponses["categories_interets"] = extraction["codes"]
+    return reponses
+
+
+def completer_questionnaire(reponses, codes_interets=None):
     """Pose dans le terminal les questions restant à traiter."""
     question = prochaine_question(reponses)
     while question is not None:
+        if question["question_code"] == "interets" and codes_interets:
+            reponses = recueillir_interets(
+                reponses, input(question["question_text"]), codes_interets
+            )
+            question = prochaine_question(reponses)
+            continue
         if question["question_code"] == "mobilite":
             reponse = demander_mobilite()
         else:
@@ -93,11 +136,11 @@ def completer_questionnaire(reponses):
     return reponses
 
 
-def main(matieres=None):
+def main(matieres=None, codes_interets=None):
     """Lance le terminal ; sans liste, aucune question de notes n’est posée."""
     print("Bienvenue dans PathFinder AI !")
     print("Pour ce test, utilise des réponses fictives.\n")
-    reponses = completer_questionnaire({})
+    reponses = completer_questionnaire({}, codes_interets)
     if matieres:
         reponses["notes"] = saisir_notes(matieres)
 
@@ -129,6 +172,10 @@ def main(matieres=None):
                 f"{numero}. {titre} :",
                 valeur if valeur is not None else "Non renseigné",
             )
+
+        if codes_interets:
+            print("Catégories d'intérêts proposées :",
+                  profil.get("categories_interets") or "Non renseigné")
 
         confirmation = input(
             "\nCe résumé est-il correct ? (oui / non) "
@@ -170,6 +217,11 @@ def main(matieres=None):
             reponses[cle] = demander_champ_valide(cle)
             continue
         reponse = demander_mobilite() if cle == "mobilite" else input(question)
+        if cle == "interets" and codes_interets:
+            reponses = recueillir_interets(
+                reponses, reponse, codes_interets, correction=True
+            )
+            continue
         resultat = corriger_reponse(reponses, cle, reponse)
 
         for erreur in resultat["errors"]:
@@ -177,7 +229,16 @@ def main(matieres=None):
 
         reponses = resultat["reponses"]
         if not resultat["errors"]:
-            reponses = completer_questionnaire(reponses)
+            if cle == "precision_interets" and codes_interets:
+                reponses["precision_interets_texte_original"] = reponse
+                reponses["categories_interets"] = None
+                extraction = analyser_interets_terminal(
+                    f"Réponse initiale : {reponses['interets_texte_original']}\nPrécision : {reponse}",
+                    codes_interets,
+                )
+                if extraction is not None and not extraction["clarification_needed"]:
+                    reponses["categories_interets"] = extraction["codes"]
+            reponses = completer_questionnaire(reponses, codes_interets)
 
     chemin = Path(__file__).resolve().parent / "profil_test.json"
 
