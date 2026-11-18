@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from validation_profil import valider_budget_annuel, valider_type_etablissement
 from questionnaire import (
     choisir_question_interets,
     QUESTIONS,
@@ -55,6 +56,22 @@ def demander_mobilite():
         print("D'accord, reprenons la réponse sur la mobilité.")
 
 
+VALIDATIONS_TERMINAL = {
+    "budget_annuel_max": valider_budget_annuel,
+    "type_etablissement": valider_type_etablissement,
+}
+
+
+def demander_champ_valide(cle):
+    """Redemande un champ du terminal jusqu'à une saisie valide ou vide."""
+    while True:
+        resultat = VALIDATIONS_TERMINAL[cle](input(QUESTIONS[cle]))
+        if not resultat["errors"]:
+            return resultat["value"]
+        for erreur in resultat["errors"]:
+            print(erreur)
+
+
 def completer_questionnaire(reponses):
     """Pose dans le terminal les questions restant à traiter."""
     question = prochaine_question(reponses)
@@ -71,6 +88,9 @@ def completer_questionnaire(reponses):
         reponses = resultat["reponses"]
         question = resultat["next_question"]
 
+    for cle in VALIDATIONS_TERMINAL:
+        if cle not in reponses:
+            reponses[cle] = demander_champ_valide(cle)
     return reponses
 
 
@@ -86,6 +106,8 @@ champs = {
     "6": ("autres_villes", "Autres villes"),
     "7": ("objectif", "Objectif"),
     "8": ("competences_declarees", "Compétences déclarées"),
+    "9": ("budget_annuel_max", "Budget annuel maximal de scolarité (DH)"),
+    "10": ("type_etablissement", "Type d'établissement"),
 }
 
 while True:
@@ -114,11 +136,11 @@ while True:
         continue
 
     choix = input(
-        "Quel champ souhaites-tu corriger ? (numéro de 1 à 8) "
+        "Quel champ souhaites-tu corriger ? (numéro de 1 à 10) "
     ).strip()
 
     if choix not in champs:
-        print("Choisis un numéro entre 1 et 8.")
+        print("Choisis un numéro entre 1 et 10.")
         continue
 
     cle, titre = champs[choix]
@@ -130,6 +152,9 @@ while True:
 
     print(f"\nCorrection : {titre}")
     print("Appuie sur Entrée pour laisser ce champ vide.")
+    if cle in VALIDATIONS_TERMINAL:
+        reponses[cle] = demander_champ_valide(cle)
+        continue
     reponse = demander_mobilite() if cle == "mobilite" else input(question)
     resultat = corriger_reponse(reponses, cle, reponse)
 

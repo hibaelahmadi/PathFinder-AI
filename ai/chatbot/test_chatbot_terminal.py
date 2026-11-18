@@ -11,14 +11,16 @@ from unittest.mock import Mock, patch
 
 
 class MobiliteTerminalTests(unittest.TestCase):
-    def parcours(self, mobilite, corrections=(), extraction=None, erreur=None):
+    def parcours(self, mobilite, corrections=(), extraction=None, erreur=None,
+                 champs_prepares=("", "")):
         source = Path(__file__).with_name("chatbot.py")
         profil_local = source.with_name("profil_test.json")
         avant = profil_local.read_bytes() if profil_local.exists() else None
         module = types.ModuleType("mobilite_gemini")
         module.extraire_mobilite = Mock(return_value=extraction, side_effect=erreur)
         valeurs = iter(["Sciences", "Rabat", "informatique", "programmation",
-                        *mobilite, "ingénierie", "", *corrections, "oui"])
+                        *mobilite, "ingénierie", "", *champs_prepares,
+                        *corrections, "oui"])
         prompts = []
         sortie = io.StringIO()
         with tempfile.TemporaryDirectory(prefix="pathfinder-terminal-") as tmp:
@@ -39,11 +41,44 @@ class MobiliteTerminalTests(unittest.TestCase):
             self.assertIsNone(next(valeurs, None), "Réponses de test non consommées")
             profil = json.loads(cible.read_text(encoding="utf-8"))
             self.assertTrue(profil["confirme"])
-            for code in ("notes", "budget_annuel_max", "type_etablissement"):
-                self.assertIn(code, profil)
-                self.assertIsNone(profil[code])
+            self.assertIsNone(profil["notes"])
         self.assertEqual(profil_local.read_bytes() if profil_local.exists() else None, avant)
         return profil, etat, prompts, sortie.getvalue(), module.extraire_mobilite
+
+    def test_budget_zero_et_correction_type(self):
+        profil, _, prompts, sortie, appel = self.parcours(
+            ["non"], champs_prepares=["0", "public"],
+            corrections=["non", "10", "autre", " PRIVÉ "],
+        )
+        self.assertEqual(profil["budget_annuel_max"], 0)
+        self.assertIsInstance(profil["budget_annuel_max"], (int, float))
+        self.assertEqual(profil["type_etablissement"], "prive")
+        self.assertIn("Écris public, privé ou sans préférence.", sortie)
+        self.assertIn("9. Budget annuel maximal de scolarité (DH) : 0", sortie)
+        self.assertEqual(sum("Ce résumé est-il correct" in p for p in prompts), 2)
+        appel.assert_not_called()
+
+    def test_budget_invalide_et_correction_zero(self):
+        profil, _, _, sortie, _ = self.parcours(
+            ["non"], champs_prepares=["-1", "abc", "12,5", "privé"],
+            corrections=["non", "9", "NaN", "0"],
+        )
+        self.assertEqual(profil["budget_annuel_max"], 0)
+        self.assertEqual(profil["type_etablissement"], "prive")
+        self.assertIn("supérieur ou égal à 0", sortie)
+        self.assertIn("doit être un nombre", sortie)
+        self.assertIn("doit être fini", sortie)
+
+    def test_champs_vides_et_corrections_vides(self):
+        profil, _, _, _, _ = self.parcours(["non"])
+        self.assertIsNone(profil["budget_annuel_max"])
+        self.assertIsNone(profil["type_etablissement"])
+        profil, _, _, _, _ = self.parcours(
+            ["non"], champs_prepares=["0", "privé"],
+            corrections=["non", "9", "", "non", "10", ""],
+        )
+        self.assertIsNone(profil["budget_annuel_max"])
+        self.assertIsNone(profil["type_etablissement"])
 
     def test_interpretation_confirmee(self):
         profil, _, prompts, _, appel = self.parcours(
