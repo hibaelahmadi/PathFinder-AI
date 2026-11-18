@@ -1,71 +1,76 @@
-
-# PathFinder AI - Recommendation Explanations
+"""Explications fondées sur les informations disponibles."""
 
 
 def generate_explanations(student, program):
-    """
-    Generate explanations for a recommended program.
-    """
-
     explanations = []
 
-    # 1. Common interests
-    common_interests = set(student["interests"]) & set(
-        program["interests"]
-    )
+    # Intérêts communs.
+    interests = student.get("interests")
+    program_interests = program.get("interests")
 
-    if common_interests:
-        interests = ", ".join(sorted(common_interests))
-        explanations.append(
-            f"Tes intérêts en {interests} correspondent "
-            "à cette formation."
-        )
+    if interests is not None and program_interests:
+        common = set(interests) & set(program_interests)
 
-    # 2. Academic strengths
-    relevant_subjects = [
+        if common:
+            explanations.append(
+                f"Tes intérêts en {', '.join(sorted(common))} "
+                "correspondent à cette formation."
+            )
+
+    # Points forts scolaires, uniquement avec des notes connues.
+    grades = student.get("grades") or {}
+    subjects = program.get("required_subjects") or []
+
+    strengths = [
         subject
-        for subject in program["required_subjects"]
-        if subject in student["grades"]
-        and student["grades"][subject] >= 14
+        for subject in subjects
+        if grades.get(subject) is not None
+        and grades[subject] >= 14
     ]
 
-    if relevant_subjects:
-        subjects = ", ".join(relevant_subjects)
+    if strengths:
         explanations.append(
-            f"Tes bons résultats en {subjects} "
+            f"Tes bons résultats en {', '.join(strengths)} "
             "constituent un point fort."
         )
 
-    # 3. Common skills
-    common_skills = set(student["skills"]) & set(
-        program["skills"]
-    )
+    # Compétences communes.
+    skills = student.get("skills")
+    program_skills = program.get("skills")
 
-    if common_skills:
-        skills = ", ".join(sorted(common_skills))
+    if skills is not None and program_skills:
+        common = set(skills) & set(program_skills)
+
+        if common:
+            explanations.append(
+                f"Tes compétences en {', '.join(sorted(common))} "
+                "sont pertinentes pour cette formation."
+            )
+
+    # Objectif professionnel.
+    goal = student.get("career_goal")
+    career_paths = program.get("career_paths") or []
+
+    if goal and goal in career_paths:
         explanations.append(
-            f"Tes compétences en {skills} "
-            "sont pertinentes pour cette formation."
+            f"Cette formation est cohérente avec ton objectif : {goal}."
         )
 
-    # 4. Career goal
-    if student["career_goal"] in program["career_paths"]:
-        explanations.append(
-            "Cette formation est cohérente avec "
-            f"ton objectif : {student['career_goal']}."
-        )
+    # Préférence d'établissement.
+    preferred_type = student.get("preferred_type")
 
-    # 5. Institution preference
-    if student["preferred_type"] == program["type"]:
+    if (
+        preferred_type is not None
+        and preferred_type == program.get("type")
+    ):
         explanations.append(
-            "Le type d'établissement correspond "
-            "à ta préférence."
+            "Le type d'établissement correspond à ta préférence."
         )
 
     if not explanations:
         explanations.append(
-            "Cette formation nécessite une exploration "
-            "complémentaire de ton profil."
+            "Les informations disponibles ne permettent pas "
+            "de justifier une correspondance positive avec ton profil."
         )
 
     return explanations

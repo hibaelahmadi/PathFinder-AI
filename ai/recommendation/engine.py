@@ -1,7 +1,11 @@
 # PathFinder AI - Recommendation Engine
 
-from constraints import check_constraints
-from ranking import rank_programs
+if __package__:
+    from .constraints import check_constraints
+    from .ranking import rank_programs, recommendation_sort_key
+else:
+    from constraints import check_constraints
+    from ranking import rank_programs, recommendation_sort_key
 
 
 def recommend(student, programs, top_n=5):
@@ -40,8 +44,8 @@ def recommend(student, programs, top_n=5):
         recommendations.append(recommendation)
 
     recommendations.sort(
-        key=lambda item: item["score"],
-        reverse=True
+        key=recommendation_sort_key,
+        reverse=True,
     )
 
     return recommendations[:top_n]

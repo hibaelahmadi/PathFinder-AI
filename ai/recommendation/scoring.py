@@ -1,77 +1,79 @@
-
-# PathFinder AI - Recommendation Engine
-# Module: scoring.py
+"""Calcul de compatibilité à partir des données disponibles."""
 
 WEIGHTS = {
     "interests": 0.30,
     "academic": 0.25,
     "skills": 0.20,
     "goals": 0.15,
-    "preferences": 0.10
+    "preferences": 0.10,
 }
 
 
 def calculate_score(student, program):
-    """
-    Calculate compatibility between a student
-    and an academic program.
+    scores = {}
 
-    Returns a score between 0 and 100.
-    """
+    # Intérêts : None signifie inconnu ; [] signifie aucun déclaré.
+    interests = student.get("interests")
+    program_interests = program.get("interests")
 
-    # 1. Calculate interest compatibility
-    student_interests = set(student["interests"])
-    program_interests = set(program["interests"])
+    if interests is not None and program_interests:
+        expected = set(program_interests)
+        scores["interests"] = len(set(interests) & expected) / len(expected)
 
-    interest_score = (
-        len(student_interests & program_interests)
-        / len(program_interests)
-        if program_interests else 0
+    # Notes : seules les notes renseignées sont utilisées.
+    grades = student.get("grades")
+    subjects = program.get("required_subjects")
+
+    if grades is not None and subjects:
+        known_grades = [
+            grades[subject]
+            for subject in subjects
+            if grades.get(subject) is not None
+        ]
+
+        if known_grades:
+            for grade in known_grades:
+                if (
+                    isinstance(grade, bool)
+                    or not isinstance(grade, (int, float))
+                    or not 0 <= grade <= 20
+                ):
+                    raise ValueError("Chaque note doit être entre 0 et 20.")
+
+            scores["academic"] = (
+                sum(known_grades) / len(known_grades) / 20
+            )
+
+    # Compétences.
+    skills = student.get("skills")
+    program_skills = program.get("skills")
+
+    if skills is not None and program_skills:
+        expected = set(program_skills)
+        scores["skills"] = len(set(skills) & expected) / len(expected)
+
+    # Objectif : nécessite des valeurs harmonisées avec le catalogue.
+    goal = student.get("career_goal")
+    career_paths = program.get("career_paths")
+
+    if goal and career_paths:
+        scores["goals"] = float(goal in career_paths)
+
+    # Public / privé : aucune préférence n'entraîne aucune pénalité.
+    preferred_type = student.get("preferred_type")
+    program_type = program.get("type")
+
+    if preferred_type is not None and program_type is not None:
+        scores["preferences"] = float(preferred_type == program_type)
+
+    if not scores:
+        return None
+
+    available_weight = sum(WEIGHTS[key] for key in scores)
+
+    weighted_score = sum(
+        WEIGHTS[key] * value
+        for key, value in scores.items()
     )
 
-    # 2. Calculate academic compatibility
-    required_subjects = program["required_subjects"]
-
-    if required_subjects:
-        academic_score = sum(
-            min(student["grades"].get(subject, 0) / 20, 1)
-            for subject in required_subjects
-        ) / len(required_subjects)
-    else:
-        academic_score = 0
-
-    # 3. Calculate skills compatibility
-    student_skills = set(student["skills"])
-    program_skills = set(program["skills"])
-
-    skill_score = (
-        len(student_skills & program_skills)
-        / len(program_skills)
-        if program_skills else 0
-    )
-
-    # 4. Calculate career goal compatibility
-    goal_score = (
-        1.0
-        if student["career_goal"] in program["career_paths"]
-        else 0.0
-    )
-
-    # 5. Calculate preference compatibility
-    preference_score = (
-        1.0
-        if student["preferred_type"] == program["type"]
-        else 0.0
-    )
-
-    # 6. Calculate final weighted score
-    final_score = 100 * (
-        WEIGHTS["interests"] * interest_score
-        + WEIGHTS["academic"] * academic_score
-        + WEIGHTS["skills"] * skill_score
-        + WEIGHTS["goals"] * goal_score
-        + WEIGHTS["preferences"] * preference_score
-    )
-
-    return round(final_score, 2)
-
+    return round(100 * weighted_score / available_weight, 2)
