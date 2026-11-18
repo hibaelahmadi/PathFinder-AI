@@ -122,7 +122,22 @@ def actualiser_competences(reponses, texte, codes):
         pass
 
 
-def completer_questionnaire(reponses, codes_interets=None, codes_competences=None):
+def actualiser_objectif(reponses, texte, codes):
+    reponses["objectif_texte_original"] = texte
+    reponses["code_metier"] = None
+    if not texte.strip():
+        return
+    try:
+        from objectif_gemini import extraire_objectif
+        resultat = extraire_objectif(texte, codes)
+        if not resultat["errors"] and not resultat["clarification_needed"]:
+            reponses["code_metier"] = resultat["code_metier"]
+    except Exception:
+        pass
+
+
+def completer_questionnaire(reponses, codes_interets=None, codes_competences=None,
+                           codes_metiers=None):
     """Pose dans le terminal les questions restant à traiter."""
     question = prochaine_question(reponses)
     while question is not None:
@@ -144,6 +159,8 @@ def completer_questionnaire(reponses, codes_interets=None, codes_competences=Non
         reponses = resultat["reponses"]
         if question["question_code"] == "competences_declarees" and codes_competences and not resultat["errors"]:
             actualiser_competences(reponses, reponse, codes_competences)
+        if question["question_code"] == "objectif" and codes_metiers and not resultat["errors"]:
+            actualiser_objectif(reponses, reponse, codes_metiers)
         question = resultat["next_question"]
 
     for cle in VALIDATIONS_TERMINAL:
@@ -152,11 +169,11 @@ def completer_questionnaire(reponses, codes_interets=None, codes_competences=Non
     return reponses
 
 
-def main(matieres=None, codes_interets=None, codes_competences=None):
+def main(matieres=None, codes_interets=None, codes_competences=None, codes_metiers=None):
     """Lance le terminal ; sans liste, aucune question de notes n’est posée."""
     print("Bienvenue dans PathFinder AI !")
     print("Pour ce test, utilise des réponses fictives.\n")
-    reponses = completer_questionnaire({}, codes_interets, codes_competences)
+    reponses = completer_questionnaire({}, codes_interets, codes_competences, codes_metiers)
     if matieres:
         reponses["notes"] = saisir_notes(matieres)
 
@@ -195,6 +212,8 @@ def main(matieres=None, codes_interets=None, codes_competences=None):
         if codes_competences:
             print("Catégories de compétences déclarées proposées :",
                   profil.get("categories_competences") or "Non renseigné")
+        if codes_metiers:
+            print("Métier proposé (code) :", profil.get("code_metier") or "Non renseigné")
 
         confirmation = input(
             "\nCe résumé est-il correct ? (oui / non) "
@@ -248,6 +267,8 @@ def main(matieres=None, codes_interets=None, codes_competences=None):
 
         reponses = resultat["reponses"]
         if not resultat["errors"]:
+            if cle == "objectif" and codes_metiers:
+                actualiser_objectif(reponses, reponse, codes_metiers)
             if cle == "competences_declarees" and codes_competences:
                 actualiser_competences(reponses, reponse, codes_competences)
             if cle == "precision_interets" and codes_interets:
@@ -259,7 +280,7 @@ def main(matieres=None, codes_interets=None, codes_competences=None):
                 )
                 if extraction is not None and not extraction["clarification_needed"]:
                     reponses["categories_interets"] = extraction["codes"]
-            reponses = completer_questionnaire(reponses, codes_interets, codes_competences)
+            reponses = completer_questionnaire(reponses, codes_interets, codes_competences, codes_metiers)
 
     chemin = Path(__file__).resolve().parent / "profil_test.json"
 
