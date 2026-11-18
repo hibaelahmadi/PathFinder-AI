@@ -108,7 +108,21 @@ def recueillir_interets(reponses, texte, codes, *, correction=False):
     return reponses
 
 
-def completer_questionnaire(reponses, codes_interets=None):
+def actualiser_competences(reponses, texte, codes):
+    reponses["competences_texte_original"] = texte
+    reponses["categories_competences"] = None
+    if not texte.strip():
+        return
+    try:
+        from competences_gemini import extraire_competences
+        resultat = extraire_competences(texte, codes)
+        if not resultat["errors"] and not resultat["clarification_needed"]:
+            reponses["categories_competences"] = resultat["codes"]
+    except Exception:
+        pass
+
+
+def completer_questionnaire(reponses, codes_interets=None, codes_competences=None):
     """Pose dans le terminal les questions restant à traiter."""
     question = prochaine_question(reponses)
     while question is not None:
@@ -128,6 +142,8 @@ def completer_questionnaire(reponses, codes_interets=None):
             print(erreur)
 
         reponses = resultat["reponses"]
+        if question["question_code"] == "competences_declarees" and codes_competences and not resultat["errors"]:
+            actualiser_competences(reponses, reponse, codes_competences)
         question = resultat["next_question"]
 
     for cle in VALIDATIONS_TERMINAL:
@@ -136,11 +152,11 @@ def completer_questionnaire(reponses, codes_interets=None):
     return reponses
 
 
-def main(matieres=None, codes_interets=None):
+def main(matieres=None, codes_interets=None, codes_competences=None):
     """Lance le terminal ; sans liste, aucune question de notes n’est posée."""
     print("Bienvenue dans PathFinder AI !")
     print("Pour ce test, utilise des réponses fictives.\n")
-    reponses = completer_questionnaire({}, codes_interets)
+    reponses = completer_questionnaire({}, codes_interets, codes_competences)
     if matieres:
         reponses["notes"] = saisir_notes(matieres)
 
@@ -176,6 +192,9 @@ def main(matieres=None, codes_interets=None):
         if codes_interets:
             print("Catégories d'intérêts proposées :",
                   profil.get("categories_interets") or "Non renseigné")
+        if codes_competences:
+            print("Catégories de compétences déclarées proposées :",
+                  profil.get("categories_competences") or "Non renseigné")
 
         confirmation = input(
             "\nCe résumé est-il correct ? (oui / non) "
@@ -229,6 +248,8 @@ def main(matieres=None, codes_interets=None):
 
         reponses = resultat["reponses"]
         if not resultat["errors"]:
+            if cle == "competences_declarees" and codes_competences:
+                actualiser_competences(reponses, reponse, codes_competences)
             if cle == "precision_interets" and codes_interets:
                 reponses["precision_interets_texte_original"] = reponse
                 reponses["categories_interets"] = None
@@ -238,7 +259,7 @@ def main(matieres=None, codes_interets=None):
                 )
                 if extraction is not None and not extraction["clarification_needed"]:
                     reponses["categories_interets"] = extraction["codes"]
-            reponses = completer_questionnaire(reponses, codes_interets)
+            reponses = completer_questionnaire(reponses, codes_interets, codes_competences)
 
     chemin = Path(__file__).resolve().parent / "profil_test.json"
 

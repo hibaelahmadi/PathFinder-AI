@@ -67,7 +67,7 @@ def _valider(texte, codes_autorises):
     return objet
 
 
-def _generer(texte, codes_autorises):
+def _generer(texte, codes_autorises, *, instruction=INSTRUCTION):
     from dotenv import dotenv_values
     from google import genai
     from google.genai import types
@@ -86,7 +86,7 @@ def _generer(texte, codes_autorises):
             model=MODEL,
             contents=json.dumps({"texte_eleve": texte, "codes_autorises": codes_autorises}, ensure_ascii=False),
             config=types.GenerateContentConfig(
-                system_instruction=INSTRUCTION, response_mime_type="application/json",
+                system_instruction=instruction, response_mime_type="application/json",
                 response_json_schema=_schema(codes_autorises), max_output_tokens=512,
             ),
         )
@@ -103,9 +103,14 @@ def extraire_interets(texte_eleve, codes_autorises):
     errors distingue l'échec technique/validation d'une simple clarification.
     Aucun objet d'entrée modifié, affichage, sauvegarde ou mise à jour de profil.
     """
+    return _extraire_categories(texte_eleve, codes_autorises, _generer, QUESTION)
+
+
+def _extraire_categories(texte_eleve, codes_autorises, generer, question):
+    """Validation et gestion d'erreurs communes aux extractions de catégories."""
     retour = {"original_text": texte_eleve if isinstance(texte_eleve, str) else None,
               "codes": [], "clarification_needed": True,
-              "clarification_question": QUESTION, "errors": []}
+              "clarification_question": question, "errors": []}
     if not isinstance(texte_eleve, str):
         retour["errors"] = ["Le texte de l'élève doit être une chaîne."]
         return retour
@@ -123,7 +128,7 @@ def extraire_interets(texte_eleve, codes_autorises):
     logging.disable(logging.CRITICAL)
     try:
         codes = list(codes_autorises)
-        sortie = _generer(texte_eleve, codes)
+        sortie = generer(texte_eleve, codes)
         try:
             resultat = _valider(sortie, codes)
         except (ValueError, TypeError):
