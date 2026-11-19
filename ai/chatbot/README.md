@@ -181,10 +181,11 @@ resultat = traiter_questionnaire(
 # La prochaine question réelle est ville_souhaitee, pas mobilite.
 ```
 
-`traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None)` est une fonction publique
+`traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None, enrichir_profil=False, codes_interets=None, codes_competences=None, codes_metiers=None)` est une fonction publique
 **synchrone** : appel direct, sans `await`. Elle réutilise `traiter_reponse`
 et `corriger_reponse`. Aucun accès à une base, aucune sauvegarde, aucun
-`input`/`print` et aucun appel LLM ne sont effectués. Le terminal conserve son
+`input`/`print` ne sont effectués. Par défaut, aucun appel LLM n'est effectué ;
+l'enrichissement optionnel décrit ci-dessous utilise Gemini. Le terminal conserve son
 fonctionnement actuel et n'utilise pas cet adaptateur.
 
 ### Mode optionnel budget et type d'établissement
@@ -270,6 +271,48 @@ La dernière réponse ne confirme pas le profil : `confirm` reste nécessaire.
 Une session confirmée se relit avec la même liste. Une ancienne session
 confirmée sans aucune réponse de note reste confirmée ; après `reopen`,
 les matières fournies deviennent des questions à traiter.
+
+### Enrichissement optionnel à la confirmation pour P2
+
+Le paramètre `enrichir_profil=False` conserve le comportement actuel.
+P2 peut activer explicitement les extractions lors de `confirm` en fournissant
+les listes de codes autorisés (exemple avec des codes fictifs) :
+
+```python
+resultat = traiter_questionnaire(
+    etat, "confirm",
+    inclure_budget_type=True,  # Garder le réglage choisi pour cette session.
+    matieres=matieres_session,  # Garder la liste choisie pour cette session.
+    enrichir_profil=True,
+    codes_interets=["interet_fictif"],
+    codes_competences=["competence_fictive"],
+    codes_metiers=["metier_fictif"],
+)
+```
+
+Seule une confirmation valide déclenche les extractions : au maximum un appel
+par champ, sans nouvelle question ni relance. L'appel reste synchrone et peut
+attendre Gemini. La configuration et les dépendances Gemini existantes sont
+nécessaires pour obtenir ces propositions.
+
+Le profil confirmé reçoit `categories_interets` (liste de codes ou `null`),
+`categories_competences` (liste de codes ou `null`) et `code_metier` (un code
+ou `null`), avec les mêmes types que dans le terminal. Les listes autorisées
+sont vérifiées par les fonctions d'extraction Python existantes. Une liste
+absente, une réponse vide, une extraction incertaine ou un échec laisse le
+champ concerné à `null`, sans empêcher la confirmation ni les autres extractions.
+
+Le calcul utilise les derniers `answer_text` : intérêts et précision actuelle,
+compétences déclarées et objectif. Les originaux dans `etat.answers` restent
+intacts. Après `reopen`, correction et nouvelle confirmation activée, les
+trois champs sont recalculés ; aucune ancienne proposition n'est réutilisée.
+Les réponses corrigées suivent toujours les règles de validation habituelles.
+
+Ces champs enrichissent uniquement l'instantané `profile` renvoyé par cette
+confirmation. Ils ne sont pas ajoutés à `etat.answers` ni à `answers_to_save`.
+P2 doit persister le profil enrichi s'il souhaite le relire : une action
+ultérieure ne recharge pas ces propositions et une seconde action `confirm`
+sur une session déjà `completed` reste refusée, sans appel Gemini.
 
 ### Entrées
 

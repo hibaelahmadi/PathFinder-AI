@@ -200,7 +200,39 @@ def corriger_reponse(reponses, question_code, answer_text):
 
 
 
-def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None):
+def _enrichir_profil(profil, answers, codes_interets, codes_competences, codes_metiers):
+    """Enrichit un instantané ; chaque extraction peut échouer indépendamment."""
+    from importlib import import_module
+
+    originaux = {entree["question_code"]: entree["answer_text"] for entree in answers}
+    interets = originaux.get("interets", "")
+    precision = originaux.get("precision_interets", "")
+    if precision.strip():
+        interets = f"Réponse initiale : {interets}\nPrécision : {precision}"
+    extractions = [
+        ("categories_interets", "interets_gemini", "extraire_interets", interets, codes_interets, "codes"),
+        ("categories_competences", "competences_gemini", "extraire_competences",
+         originaux.get("competences_declarees", ""), codes_competences, "codes"),
+        ("code_metier", "objectif_gemini", "extraire_objectif",
+         originaux.get("objectif", ""), codes_metiers, "code_metier"),
+    ]
+    for champ, module, fonction, texte, codes, cle in extractions:
+        profil[champ] = None
+        if not texte.strip() or not codes:
+            continue
+        try:
+            module = import_module(f".{module}", __package__) if __package__ else import_module(module)
+            retour = getattr(module, fonction)(texte, deepcopy(codes))
+            if not retour["errors"] and not retour["clarification_needed"]:
+                profil[champ] = retour[cle]
+        except Exception:
+            # Les détails d'erreur peuvent contenir des secrets ; ne pas les exposer.
+            pass
+
+
+def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None,
+                         enrichir_profil=False, codes_interets=None,
+                         codes_competences=None, codes_metiers=None):
     """Adapte synchroniquement le questionnaire à un état échangeable en JSON.
 
     answers est un dictionnaire indexé par question_code.
@@ -210,6 +242,7 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
     inclure_budget_type=True ajoute budget et type après les compétences.
     matieres fournit les codes ordonnés des questions finales note:<code>.
     La même liste doit être fournie à chaque appel de la session.
+    enrichir_profil active les extractions seulement lors d'un confirm valide.
     Le mode est fourni par l'appelant à chaque appel, sans modifier le contrat
     d'état. Une ancienne session completed reste confirmée jusqu'à reopen.
     """
@@ -318,6 +351,8 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
             if code in valeurs and valeurs[code] is not None
         } or None
         profil["confirme"] = confirme
+        if enrichir_profil and action == "confirm" and confirme and not erreurs:
+            _enrichir_profil(profil, entrees, codes_interets, codes_competences, codes_metiers)
         nouvel_etat = initial if erreurs else {
             "status": status,
             "expected_question_code": suivante["question_code"] if suivante else None,

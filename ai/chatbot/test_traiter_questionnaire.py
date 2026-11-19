@@ -1,10 +1,82 @@
 from copy import deepcopy
+import json
 import unittest
+from unittest.mock import patch
 
 from ai.chatbot.questionnaire import traiter_questionnaire
 
 
 class ContratQuestionnaireTests(unittest.TestCase):
+    def test_enrichissement_confirmation_et_reconfirmation(self):
+        etat = self.remplir()["etat"]
+        # Une compétence explicite est nécessaire pour cette extraction.
+        etat = traiter_questionnaire(etat, "correct", {
+            "question_code": "competences_declarees", "answer_text": "  Je sais coder.  "})["etat"]
+        options = dict(enrichir_profil=True, codes_interets=["interet_a", "interet_b"],
+                       codes_competences=["competence_a"], codes_metiers=["metier_a"])
+        avant = deepcopy((etat, options))
+
+        def modele(code):
+            return json.dumps({"codes": [code], "clarification_needed": False,
+                               "clarification_question": None})
+
+        with patch("ai.chatbot.interets_gemini._generer", return_value=modele("interet_a")) as interets, \
+                patch("ai.chatbot.competences_gemini._generer_competences", return_value=modele("competence_a")), \
+                patch("ai.chatbot.objectif_gemini._generer_objectif", return_value=modele("metier_a")):
+            confirme = traiter_questionnaire(etat, "confirm", **options)
+            self.assertFalse(confirme["errors"])
+            self.assertTrue(confirme["profile_confirmed"])
+            self.assertEqual(confirme["profile"]["categories_interets"], ["interet_a"])
+            self.assertEqual(confirme["profile"]["categories_competences"], ["competence_a"])
+            self.assertEqual(confirme["profile"]["code_metier"], "metier_a")
+            self.assertIn("programmation", interets.call_args.args[0])
+            self.assertEqual(confirme["etat"]["answers"], etat["answers"])
+            self.assertEqual((etat, options), avant)
+            interets.reset_mock()
+            interdit = traiter_questionnaire(confirme["etat"], "confirm", **options)
+            self.assertTrue(interdit["errors"])
+            interets.assert_not_called()
+        rouvert = traiter_questionnaire(confirme["etat"], "reopen", **options)
+        corrige = traiter_questionnaire(rouvert["etat"], "correct", {
+            "question_code": "interets", "answer_text": "  Biologie  "}, **options)
+        precision = traiter_questionnaire(corrige["etat"], "answer", {
+            "question_code": "precision_interets", "answer_text": "  Observer les cellules  "}, **options)
+        with patch("ai.chatbot.interets_gemini._generer", return_value=modele("interet_b")) as interets, \
+                patch("ai.chatbot.competences_gemini._generer_competences", return_value=modele("competence_a")), \
+                patch("ai.chatbot.objectif_gemini._generer_objectif", return_value=modele("metier_a")):
+            nouveau = traiter_questionnaire(precision["etat"], "confirm", **options)
+            self.assertEqual(nouveau["profile"]["categories_interets"], ["interet_b"])
+            texte = interets.call_args.args[0]
+            self.assertIn("  Biologie  ", texte)
+            self.assertIn("  Observer les cellules  ", texte)
+            self.assertNotIn("programmation", texte)
+
+    def test_enrichissement_echecs_independants(self):
+        etat = self.remplir()["etat"]
+        etat = traiter_questionnaire(etat, "correct", {
+            "question_code": "competences_declarees", "answer_text": "Je sais coder"})["etat"]
+        with patch("ai.chatbot.interets_gemini._generer", side_effect=RuntimeError("erreur simulée")), \
+                patch("ai.chatbot.competences_gemini._generer_competences", return_value=json.dumps({
+                    "codes": [], "clarification_needed": True, "clarification_question": "Préciser ?"})), \
+                patch("ai.chatbot.objectif_gemini._generer_objectif", return_value=json.dumps({
+                    "codes": ["metier_a"], "clarification_needed": False, "clarification_question": None})):
+            retour = traiter_questionnaire(etat, "confirm", enrichir_profil=True,
+                codes_interets=["interet_a"], codes_competences=["competence_a"], codes_metiers=["metier_a"])
+        self.assertFalse(retour["errors"])
+        self.assertTrue(retour["profile_confirmed"])
+        self.assertIsNone(retour["profile"]["categories_interets"])
+        self.assertIsNone(retour["profile"]["categories_competences"])
+        self.assertEqual(retour["profile"]["code_metier"], "metier_a")
+
+    def test_enrichissement_desactive_ou_confirmation_invalide(self):
+        with patch("ai.chatbot.questionnaire._enrichir_profil") as extraction:
+            retour = traiter_questionnaire(self.remplir()["etat"], "confirm")
+            self.assertNotIn("categories_interets", retour["profile"])
+            incomplet = traiter_questionnaire(None, "start", enrichir_profil=True)
+            erreur = traiter_questionnaire(incomplet["etat"], "confirm", enrichir_profil=True)
+            self.assertTrue(erreur["errors"])
+            extraction.assert_not_called()
+
     def test_notes_cycle_complet_et_relecture(self):
         matieres = ["matiere_fictive_b", "matiere_fictive_a"]
 
