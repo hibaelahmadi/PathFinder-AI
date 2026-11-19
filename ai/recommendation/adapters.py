@@ -23,15 +23,30 @@ def adapt_student_profile(profile):
         "can_relocate": mobility_mapping.get(mobility),
         "other_cities_text": profile.get("autres_villes"),
 
-        # Textes conservés en attendant les catégories de Nada/Hafssa.
-        "interests_text": profile.get("interets"),
-        "interest_details_text": profile.get("precision_interets"),
-        "skills_text": profile.get("competences_declarees"),
-        "career_goal": profile.get("objectif"),
+        # Textes libres conservés sans modification.
+        "interests_text": profile.get(
+            "interets_texte_original",
+            profile.get("interets"),
+        ),
+        "interest_details_text": profile.get(
+            "precision_interets_texte_original",
+            profile.get("precision_interets"),
+        ),
+        "skills_text": profile.get(
+            "competences_texte_original",
+            profile.get("competences_declarees"),
+        ),
+        "career_goal_text": profile.get(
+            "objectif_texte_original",
+            profile.get("objectif"),
+        ),
+
+        # Codes structurés utilisés par le scoring.
+        "interests": profile.get("categories_interets"),
+        "skills": profile.get("categories_competences"),
+        "career_goal": profile.get("code_metier"),
 
         # Données encore indisponibles : aucune valeur inventée.
-        "interests": None,
-        "skills": None,
         "grades": profile.get("notes"),
         "max_annual_budget": profile.get("budget_annuel_max"),
         "preferred_type": profile.get("type_etablissement"),
