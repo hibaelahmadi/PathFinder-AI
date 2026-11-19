@@ -43,7 +43,7 @@ exposée par l’adaptateur synchrone décrit ci-dessous.
 | Fonction | Paramètres | Résultat |
 | --- | --- | --- |
 | `choisir_question_interets(interets)` | Texte des intérêts, ou `None`. | Texte de la question de précision : informatique, biologie ou question générique. La recherche des mots-clés ignore les majuscules. |
-| `creer_profil()` | Aucun. | Nouveau dictionnaire contenant les huit champs du profil à `None` et `confirme` à `False`. |
+| `creer_profil()` | Aucun. | Nouveau dictionnaire contenant les onze champs du profil à `None` et `confirme` à `False`. |
 | `prochaine_question(reponses)` | Dictionnaire des réponses déjà traitées. | Dictionnaire avec `question_code` et `question_text`, ou `None` si toutes les questions applicables sont traitées. |
 | `traiter_reponse(reponses, question_code, answer_text)` | Réponses actuelles, code de la question attendue et réponse textuelle. | État actualisé décrit ci-dessous. Refuse une réponse à une autre question ou après la fin du questionnaire. |
 | `corriger_reponse(reponses, question_code, answer_text)` | Réponses actuelles, code d'une question déjà traitée et nouvelle réponse textuelle. | Même état, avec en plus `answer_codes_to_delete`. Refuse un code inconnu, une question non traitée ou `autres_villes` si la mobilité n'est pas `oui`. |
@@ -106,6 +106,27 @@ Le terminal reprend ensuite les questions manquantes avec
 le résumé pour confirmation. Par exemple, informatique vers biologie demande
 une nouvelle précision ; mobilité `oui` vers `non` efface les anciennes villes
 sans les redemander ; `non` vers `oui` demande les autres villes.
+
+## Champs préparés pour le profil
+
+Les trois champs suivants sont présents dans `creer_profil()`. Leur structure
+prévue est :
+
+| Champ | Valeur prévue |
+| --- | --- |
+| `notes` | Objet matière → nombre entre 0 et 20 inclus, ou `None` si non renseigné. Omettre les matières sans note ; une note de `0` reste une vraie valeur. |
+| `budget_annuel_max` | Nombre positif ou nul, ou `None` si non renseigné. Montant annuel maximal en DH pour les frais de scolarité uniquement, hors frais d'inscription, logement et transport. Un budget de `0` reste une vraie valeur. |
+| `type_etablissement` | `"public"`, `"prive"` ou `None` (sans préférence ou non renseigné). |
+
+Leurs textes sont préparés dans `QUESTIONS`, avec Entrée pour passer, mais
+leurs questions ne sont pas encore intégrées au parcours. Ils apparaissent
+actuellement à `null` dans le profil JSON sauvegardé par le terminal et dans
+`profile` renvoyé par l'adaptateur. P2 a confirmé ces trois champs ; sa validation
+backend doit encore être adaptée. Aucune logique backend n'est ajoutée ici.
+
+Les codes des matières attendent la validation P4/P5 : aucune liste de
+matières n'est définie. Les validations isolées ne collectent pas encore
+ces informations et ne construisent pas l'objet `notes`.
 
 ## Limites actuelles
 
@@ -200,7 +221,7 @@ Un second `confirm` et un `reopen` en cours d'entretien sont également refusés
 | `next_question` | Question recalculée (`question_code`, `question_text`) ou `None`. |
 | `answers_to_save` | Liste contenant seulement la réponse acceptée par `answer` ou `correct`, avec texte original, texte de question canonique et valeur normalisée. Vide pour les autres actions. Ce sont des données à persister par l'appelant, pas une sauvegarde effectuée. |
 | `answer_codes_to_delete` | Codes effectivement supprimés après correction ; liste vide sinon. |
-| `profile` | Instantané de `creer_profil()` enrichi des valeurs normalisées et de `confirme`. Aucun champ P5 ajouté. |
+| `profile` | Instantané de `creer_profil()` enrichi des valeurs normalisées et de `confirme`. Inclut les trois champs préparés décrits ci-dessus, actuellement à `null`. |
 | `profile_confirmed` | Confirmation actuelle : `True` pour un état `completed` valide, `False` sinon. |
 | `errors` | Liste de messages, vide en cas de succès. |
 
@@ -273,6 +294,9 @@ vides sont volontaires et restent distinctes des réponses absentes.
   "answers_to_save": [],
   "answer_codes_to_delete": [],
   "profile": {
+    "notes": null,
+    "budget_annuel_max": null,
+    "type_etablissement": null,
     "bac": null,
     "ville_souhaitee": null,
     "interets": null,
@@ -344,6 +368,9 @@ vides sont volontaires et restent distinctes des réponses absentes.
   "answers_to_save": [],
   "answer_codes_to_delete": [],
   "profile": {
+    "notes": null,
+    "budget_annuel_max": null,
+    "type_etablissement": null,
     "bac": null,
     "ville_souhaitee": null,
     "interets": null,
@@ -382,6 +409,9 @@ vides sont volontaires et restent distinctes des réponses absentes.
   "answers_to_save": [],
   "answer_codes_to_delete": [],
   "profile": {
+    "notes": null,
+    "budget_annuel_max": null,
+    "type_etablissement": null,
     "bac": "Sciences mathématiques",
     "ville_souhaitee": null,
     "interets": null,

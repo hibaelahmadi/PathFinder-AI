@@ -13,11 +13,56 @@ from questionnaire import (
 print("Bienvenue dans PathFinder AI !")
 print("Pour ce test, utilise des réponses fictives.\n")
 
+
+def demander_mobilite():
+    """Interprète une phrase seulement après accord explicite de l'élève."""
+    choix = ("oui", "non", "je ne sais pas")
+    while True:
+        texte = input(QUESTIONS["mobilite"])
+        valeur = texte.strip().lower()
+        if valeur in choix:
+            return valeur
+
+        try:
+            from mobilite_gemini import extraire_mobilite
+
+            extraction = extraire_mobilite(texte)
+        except Exception:
+            # Ne jamais afficher les détails d'une erreur susceptible de contenir une clé.
+            extraction = None
+
+        if not extraction:
+            print("Interprétation indisponible. Écris oui, non ou je ne sais pas.")
+            continue
+        if extraction["clarification_needed"]:
+            print(extraction["clarification_question"])
+            print("Tu peux répondre : oui, non ou je ne sais pas.")
+            continue
+
+        valeur = extraction["valeur"]
+        if valeur not in choix:
+            print("Interprétation indisponible. Écris oui, non ou je ne sais pas.")
+            continue
+        while True:
+            accord = input(
+                f"J’ai compris : {valeur}. Est-ce correct ? (oui / non) "
+            ).strip().lower()
+            if accord in ("oui", "non"):
+                break
+            print("Écris oui ou non.")
+        if accord == "oui":
+            return valeur
+        print("D'accord, reprenons la réponse sur la mobilité.")
+
+
 def completer_questionnaire(reponses):
     """Pose dans le terminal les questions restant à traiter."""
     question = prochaine_question(reponses)
     while question is not None:
-        reponse = input(question["question_text"])
+        if question["question_code"] == "mobilite":
+            reponse = demander_mobilite()
+        else:
+            reponse = input(question["question_text"])
         resultat = traiter_reponse(reponses, question["question_code"], reponse)
 
         for erreur in resultat["errors"]:
@@ -85,7 +130,8 @@ while True:
 
     print(f"\nCorrection : {titre}")
     print("Appuie sur Entrée pour laisser ce champ vide.")
-    resultat = corriger_reponse(reponses, cle, input(question))
+    reponse = demander_mobilite() if cle == "mobilite" else input(question)
+    resultat = corriger_reponse(reponses, cle, reponse)
 
     for erreur in resultat["errors"]:
         print(erreur)

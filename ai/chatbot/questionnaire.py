@@ -24,6 +24,21 @@ def choisir_question_interets(interets):
 
 
 QUESTIONS = {
+    "notes": (
+        "Quelles sont tes notes par matière sur 20 ? "
+        "Cette réponse est facultative : appuie sur Entrée pour passer. "
+        "0 est une vraie note et ne signifie pas une réponse vide. "
+    ),
+    "budget_annuel_max": (
+        "Quel est ton budget annuel maximal en DH pour les frais de scolarité "
+        "annuels uniquement, hors frais d'inscription, logement et transport ? "
+        "Cette réponse est facultative : appuie sur Entrée pour passer. "
+        "0 est un vrai budget et ne signifie pas une réponse vide. "
+    ),
+    "type_etablissement": (
+        "Quel type d'établissement préfères-tu : public, privé ou sans préférence ? "
+        "Cette réponse est facultative : appuie sur Entrée pour passer. "
+    ),
     "bac": "Quelle est ta série de bac ? ",
     "ville_souhaitee": "Dans quelle ville souhaites-tu étudier ? ",
     "interets": "Quelles matières ou activités aimes-tu ? ",
@@ -50,6 +65,9 @@ QUESTIONS = {
 def creer_profil():
     """Prépare un profil vide pour un nouvel entretien."""
     return {
+        "notes": None,
+        "budget_annuel_max": None,
+        "type_etablissement": None,
         "bac": None,
         "ville_souhaitee": None,
         "interets": None,

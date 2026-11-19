@@ -82,6 +82,10 @@ class ContratQuestionnaireTests(unittest.TestCase):
         self.assertIsNone(retour["next_question"])
         self.assertFalse(retour["profile_confirmed"])
         self.assertIsNone(retour["profile"]["competences_declarees"])
+        for code in ("notes", "budget_annuel_max", "type_etablissement"):
+            self.assertIn(code, retour["profile"])
+            self.assertIsNone(retour["profile"][code])
+            self.assertNotIn(code, retour["etat"]["answers"])
         self.assertEqual(retour["etat"]["answers"]["bac"]["answer_text"], " Sciences ")
         self.assertEqual(retour["etat"]["answers"]["bac"]["answer_value"], "Sciences")
         confirme = traiter_questionnaire(retour["etat"], "confirm")
