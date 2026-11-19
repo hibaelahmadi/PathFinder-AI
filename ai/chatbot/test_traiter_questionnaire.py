@@ -5,6 +5,92 @@ from ai.chatbot.questionnaire import traiter_questionnaire
 
 
 class ContratQuestionnaireTests(unittest.TestCase):
+    def appel_budget_type(self, etat, action, code=None, texte=None):
+        reponse = None if code is None else {
+            "question_code": code, "answer_text": texte,
+            "answer_value": "valeur client ignorée", "question_text": "FAUX",
+        }
+        initial, initial_reponse = deepcopy(etat), deepcopy(reponse)
+        retour = traiter_questionnaire(
+            etat, action, reponse, inclure_budget_type=True,
+        )
+        self.assertEqual(etat, initial)
+        self.assertEqual(reponse, initial_reponse)
+        return retour
+
+    def test_mode_budget_type_cycle_correction_confirmation(self):
+        retour = traiter_questionnaire(None, "start", inclure_budget_type=True)
+        for texte in ["Sciences", "Rabat", "informatique", "jeux", "non", "ingénierie", "Python"]:
+            retour = self.appel_budget_type(retour["etat"], "answer",
+                                           retour["next_question"]["question_code"], texte)
+            self.assertFalse(retour["errors"])
+        self.assertEqual(retour["next_question"]["question_code"], "budget_annuel_max")
+        refuse = self.appel_budget_type(retour["etat"], "confirm")
+        self.assertTrue(refuse["errors"])
+        self.assertEqual(refuse["etat"], retour["etat"])
+        retour = self.appel_budget_type(retour["etat"], "answer", "budget_annuel_max", " 0 ")
+        self.assertEqual(retour["profile"]["budget_annuel_max"], 0)
+        self.assertIsInstance(retour["profile"]["budget_annuel_max"], (int, float))
+        self.assertEqual(retour["answers_to_save"][0]["answer_text"], " 0 ")
+        self.assertEqual(retour["answers_to_save"][0]["answer_value"], 0)
+        self.assertEqual(retour["next_question"]["question_code"], "type_etablissement")
+        retour = self.appel_budget_type(retour["etat"], "answer", "type_etablissement", " PRIVÉ ")
+        self.assertEqual(retour["profile"]["type_etablissement"], "prive")
+        self.assertEqual(retour["etat"]["answers"]["type_etablissement"]["answer_text"], " PRIVÉ ")
+        self.assertEqual(retour["answers_to_save"][0]["answer_value"], "prive")
+        self.assertIsNone(retour["next_question"])
+        self.assertFalse(retour["profile_confirmed"])
+        for code, texte, valeur in [("budget_annuel_max", "12,5", 12.5),
+                                     ("type_etablissement", "public", "public"),
+                                     ("budget_annuel_max", "", None),
+                                     ("type_etablissement", "  ", None),
+                                     ("budget_annuel_max", "0", 0),
+                                     ("type_etablissement", "privé", "prive")]:
+            retour = self.appel_budget_type(retour["etat"], "correct", code, texte)
+            self.assertFalse(retour["errors"])
+            self.assertEqual(retour["profile"][code], valeur)
+            self.assertEqual(retour["answers_to_save"][0]["answer_value"], valeur)
+        retour = self.appel_budget_type(retour["etat"], "confirm")
+        self.assertFalse(retour["errors"])
+        self.assertTrue(retour["profile_confirmed"])
+        self.assertEqual(retour["etat"]["status"], "completed")
+
+    def test_mode_budget_type_erreurs_et_champs_vides(self):
+        etat = self.remplir()["etat"]
+        for action, code, texte in [("answer", "type_etablissement", "public"),
+                                     ("correct", "budget_annuel_max", "0"),
+                                     ("answer", "budget_annuel_max", "-1"),
+                                     ("answer", "budget_annuel_max", "NaN"),
+                                     ("answer", "budget_annuel_max", 0)]:
+            erreur = self.appel_budget_type(etat, action, code, texte)
+            self.assertTrue(erreur["errors"])
+            self.assertEqual(erreur["etat"], etat)
+            self.assertEqual(erreur["answers_to_save"], [])
+            self.assertEqual(erreur["answer_codes_to_delete"], [])
+        retour = self.appel_budget_type(etat, "answer", "budget_annuel_max", "")
+        self.assertIsNone(retour["profile"]["budget_annuel_max"])
+        erreur = self.appel_budget_type(retour["etat"], "answer", "type_etablissement", "autre")
+        self.assertTrue(erreur["errors"])
+        self.assertEqual(erreur["etat"], retour["etat"])
+        retour = self.appel_budget_type(retour["etat"], "answer", "type_etablissement", "")
+        self.assertIsNone(retour["profile"]["type_etablissement"])
+        erreur = self.appel_budget_type(retour["etat"], "correct", "budget_annuel_max", "inf")
+        self.assertTrue(erreur["errors"])
+        self.assertEqual(erreur["etat"], retour["etat"])
+
+    def test_ancienne_session_confirmee_avec_et_sans_mode(self):
+        ancien = traiter_questionnaire(self.remplir()["etat"], "confirm")
+        for mode in (False, True):
+            retour = traiter_questionnaire(ancien["etat"], "confirm", inclure_budget_type=mode)
+            self.assertTrue(retour["profile_confirmed"])
+            self.assertEqual(retour["profile"], ancien["profile"])
+            self.assertIsNone(retour["next_question"])
+            self.assertEqual(retour["etat"], ancien["etat"])
+        rouvert = self.appel_budget_type(ancien["etat"], "reopen")
+        self.assertFalse(rouvert["errors"])
+        self.assertFalse(rouvert["profile_confirmed"])
+        self.assertEqual(rouvert["next_question"]["question_code"], "budget_annuel_max")
+
     def demarrer(self):
         retour = traiter_questionnaire(None, "start")
         self.assertEqual(retour["errors"], [])

@@ -1,5 +1,10 @@
 from copy import deepcopy
 
+if __package__:
+    from .validation_profil import valider_budget_annuel, valider_type_etablissement
+else:
+    from validation_profil import valider_budget_annuel, valider_type_etablissement
+
 
 def choisir_question_interets(interets):
     """Choisit une question de précision selon les intérêts."""
@@ -195,13 +200,16 @@ def corriger_reponse(reponses, question_code, answer_text):
 
 
 
-def traiter_questionnaire(etat, action, reponse=None):
+def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False):
     """Adapte synchroniquement le questionnaire à un état échangeable en JSON.
 
     answers est un dictionnaire indexé par question_code.
     reponse contient question_code, answer_text et les métadonnées facultatives.
     Les métadonnées des questions et valeurs structurées sont recalculées.
     Aucun objet reçu n'est modifié et aucune persistance n'est effectuée.
+    inclure_budget_type=True ajoute budget et type après les compétences.
+    Le mode est fourni par l'appelant à chaque appel, sans modifier le contrat
+    d'état. Une ancienne session completed reste confirmée jusqu'à reopen.
     """
     initial = deepcopy(etat)
     valeurs = {}
@@ -209,6 +217,29 @@ def traiter_questionnaire(etat, action, reponse=None):
     errors = []
     status = "in_progress"
     codes = set(QUESTIONS) | {"precision_interets"}
+    validations = {
+        "budget_annuel_max": valider_budget_annuel,
+        "type_etablissement": valider_type_etablissement,
+    }
+
+    def valider(code, texte):
+        if code in validations:
+            retour = validations[code](texte)
+            return retour["value"], retour["errors"]
+        return _valider_reponse(code, texte)
+
+    def question_suivante():
+        question = prochaine_question(valeurs)
+        if question is not None or not inclure_budget_type:
+            return question
+        # Les anciens profils confirmés restent lisibles ; reopen active
+        # ensuite les nouvelles questions sans confirmer à nouveau le profil.
+        if status == "completed" and not any(code in valeurs for code in validations):
+            return None
+        for code in validations:
+            if code not in valeurs:
+                return {"question_code": code, "question_text": QUESTIONS[code]}
+        return None
 
     if etat is None:
         if action != "start":
@@ -234,7 +265,7 @@ def traiter_questionnaire(etat, action, reponse=None):
                 if cle != code:
                     errors.append("La clé de answers doit correspondre à question_code.")
                     continue
-                valeur, erreurs = _valider_reponse(code, entree.get("answer_text"))
+                valeur, erreurs = valider(code, entree.get("answer_text"))
                 errors.extend(erreurs)
                 if not erreurs:
                     valeurs[code] = valeur
@@ -242,7 +273,7 @@ def traiter_questionnaire(etat, action, reponse=None):
                                     "answer_text": entree["answer_text"]})
             if "autres_villes" in valeurs and valeurs.get("mobilite") != "oui":
                 errors.append("Les autres villes nécessitent une mobilité acceptée.")
-        if status == "completed" and prochaine_question(valeurs) is not None:
+        if status == "completed" and question_suivante() is not None:
             errors.append("Un entretien completed doit avoir traité toutes les questions.")
 
     def texte_question(code):
@@ -256,7 +287,7 @@ def traiter_questionnaire(etat, action, reponse=None):
                 "answer_text": entree["answer_text"], "answer_value": valeurs[code]}
 
     def resultat(erreurs, sauvegardes=None, suppressions=None):
-        suivante = prochaine_question(valeurs)
+        suivante = question_suivante()
         confirme = status == "completed" and suivante is None and not errors
         profil = creer_profil()
         profil.update(valeurs)
@@ -292,7 +323,7 @@ def traiter_questionnaire(etat, action, reponse=None):
     if status == "completed":
         return resultat(["Rouvre l'entretien avant de répondre ou de le corriger."])
     if action == "confirm":
-        if prochaine_question(valeurs) is not None:
+        if question_suivante() is not None:
             return resultat(["Toutes les questions applicables doivent être traitées."])
         status = "completed"
         return resultat([])
@@ -301,8 +332,22 @@ def traiter_questionnaire(etat, action, reponse=None):
     code = reponse.get("question_code")
     if not isinstance(code, str):
         return resultat(["question_code doit être une chaîne de caractères."])
-    fonction = traiter_reponse if action == "answer" else corriger_reponse
-    traitement = fonction(valeurs, code, reponse.get("answer_text"))
+    if code in validations:
+        erreurs = []
+        if not inclure_budget_type:
+            erreurs.append("Le mode budget et type d'établissement n'est pas activé.")
+        elif action == "answer":
+            question = question_suivante()
+            if question is None or question["question_code"] != code:
+                erreurs.append("Le code ne correspond pas à la question attendue.")
+        elif code not in valeurs:
+            erreurs.append("Cette question n'a pas encore été traitée.")
+        valeur, erreurs_validation = valider(code, reponse.get("answer_text"))
+        erreurs.extend(erreurs_validation)
+        traitement = {"reponses": {**valeurs, code: valeur}, "errors": erreurs}
+    else:
+        fonction = traiter_reponse if action == "answer" else corriger_reponse
+        traitement = fonction(valeurs, code, reponse.get("answer_text"))
     if traitement["errors"]:
         return resultat(traitement["errors"])
     valeurs = traitement["reponses"]

@@ -181,11 +181,52 @@ resultat = traiter_questionnaire(
 # La prochaine question réelle est ville_souhaitee, pas mobilite.
 ```
 
-`traiter_questionnaire(etat, action, reponse=None)` est une fonction publique
+`traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False)` est une fonction publique
 **synchrone** : appel direct, sans `await`. Elle réutilise `traiter_reponse`
 et `corriger_reponse`. Aucun accès à une base, aucune sauvegarde, aucun
 `input`/`print` et aucun appel LLM ne sont effectués. Le terminal conserve son
 fonctionnement actuel et n'utilise pas cet adaptateur.
+
+### Mode optionnel budget et type d'établissement
+
+Le mode `inclure_budget_type` est **désactivé par défaut**. Avec `True`,
+l'adaptateur demande `budget_annuel_max`, puis `type_etablissement`, après
+`competences_declarees` et avant la confirmation. Les notes et les catégories
+ne sont pas ajoutées à ce parcours.
+
+P2 doit conserver le même réglage à chaque appel d'une même session :
+`start`, `answer`, `correct`, `confirm` et `reopen`. Ce réglage est géré par
+l'appelant ; il n'est pas stocké dans `etat` et la structure de retour reste
+inchangée. Exemple depuis la racine du dépôt :
+
+```python
+from ai.chatbot.questionnaire import traiter_questionnaire
+
+mode_budget_type = True  # Réglage conservé pour toute la session côté P2.
+resultat = traiter_questionnaire(
+    None, "start", inclure_budget_type=mode_budget_type,
+)
+resultat = traiter_questionnaire(
+    resultat["etat"], "answer",
+    {"question_code": "bac", "answer_text": "Sciences mathématiques"},
+    inclure_budget_type=mode_budget_type,
+)
+# Continuer avec les codes de resultat["next_question"], dans l'ordre.
+# Garder inclure_budget_type=mode_budget_type pour tous les appels suivants.
+```
+
+La saisie et la correction réutilisent les validateurs existants : budget
+annuel de scolarité en DH positif ou nul (hors inscription, logement et
+transport), type `public`, `privé`/`prive` ou sans préférence. Une réponse vide
+donne `None` (`null` en JSON), `0` reste un nombre et `privé` devient `prive`.
+Le texte original est conservé dans `answer_text` ; la valeur validée est
+recalculée dans `answer_value` et le profil, sans faire confiance à celle
+envoyée par le client. Une erreur préserve l'état initial.
+
+Après les deux réponses, la session reste `in_progress` et non confirmée
+jusqu'à `confirm`. Une ancienne session `completed` sans ces réponses reste
+lisible et confirmée, même avec le mode activé. Après `reopen` avec ce mode,
+les deux questions sont proposées et une nouvelle confirmation est nécessaire.
 
 ### Entrées
 
