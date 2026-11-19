@@ -12,6 +12,30 @@ python ai\chatbot\chatbot.py
 
 Python est nécessaire. Aucune bibliothèque externe n'est requise.
 
+### Lancement avec le vocabulaire externe
+
+Depuis la racine du dépôt dans PowerShell, avec l'environnement Gemini déjà
+préparé, remplace le chemin d'exemple par celui de ton fichier JSON :
+
+```powershell
+.\.venv\Scripts\python.exe ai\chatbot\chatbot.py --vocabulaire 'C:\chemin\vers\vocabulaire.json'
+```
+
+Le JSON reste hors du dépôt. Son objet `categories` doit contenir les listes
+de codes textuels uniques `required_subjects`, `interests`, `skills` et
+`career_paths`. Elles sont transmises à `main()` comme matières, intérêts,
+compétences et métiers. Les autres métadonnées du fichier sont ignorées.
+Un fichier absent, illisible ou mal formé provoque un message indiquant son
+chemin et arrête le lancement avant toute question ou sauvegarde.
+Sans `--vocabulaire`, le lancement précédent est conservé.
+
+Cette option concerne uniquement le terminal et ne modifie pas le contrat P2.
+Les codes provisoires restent à valider. Les extractions utilisent Gemini si
+sa configuration et ses dépendances sont disponibles ; sinon le parcours
+continue avec des catégories non renseignées. Aucune bibliothèque externe
+n'est nécessaire pour le parcours classique. Le profil local est toujours
+sauvegardé uniquement après confirmation, à l'emplacement décrit ci-dessous.
+
 ## Tests
 
 Depuis la racine du dépôt :

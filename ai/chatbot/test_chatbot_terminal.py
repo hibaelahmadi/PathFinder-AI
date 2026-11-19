@@ -38,7 +38,8 @@ class MobiliteTerminalTests(unittest.TestCase):
                     patch("builtins.input", side_effect=repondre), \
                     contextlib.redirect_stdout(sortie):
                 if matieres is None:
-                    etat = runpy.run_path(str(script), run_name="__main__")
+                    with patch.object(sys, "argv", [str(script)]):
+                        etat = runpy.run_path(str(script), run_name="__main__")
                 else:
                     terminal = runpy.run_path(str(script), run_name="terminal_test")
                     etat = terminal["main"](matieres)

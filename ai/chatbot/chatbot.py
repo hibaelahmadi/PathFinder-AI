@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 from saisie_notes import saisir_notes
@@ -296,6 +297,38 @@ def main(matieres=None, codes_interets=None, codes_competences=None, codes_metie
     return {"profil": profil, "reponses": reponses}
 
 
+def lancer_terminal(argv=None):
+    """Charge les listes externes optionnelles avant de démarrer l'entretien."""
+    parser = argparse.ArgumentParser(description="Questionnaire PathFinder AI")
+    parser.add_argument("--vocabulaire", metavar="CHEMIN", type=Path,
+                        help="JSON contenant les quatre listes dans categories")
+    arguments = parser.parse_args(argv)
+    parametres = {}
+    if arguments.vocabulaire is not None:
+        chemin = arguments.vocabulaire
+        correspondances = {
+            "required_subjects": "matieres", "interests": "codes_interets",
+            "skills": "codes_competences", "career_paths": "codes_metiers",
+        }
+        try:
+            contenu = json.loads(chemin.read_text(encoding="utf-8-sig"))
+            categories = contenu["categories"]
+            for cle, parametre in correspondances.items():
+                codes = categories[cle]
+                if (not isinstance(codes, list)
+                        or any(not isinstance(code, str) or not code.strip() for code in codes)
+                        or len(codes) != len(set(codes))):
+                    raise ValueError(f"{cle} doit être une liste de codes textuels uniques non vides")
+                parametres[parametre] = codes
+        except (OSError, UnicodeError, ValueError, KeyError, TypeError):
+            parser.error(
+                f"Impossible de charger le vocabulaire '{chemin}' : fichier absent, "
+                "illisible ou mal formé. Attendu : categories avec required_subjects, "
+                "interests, skills et career_paths, listes de codes textuels uniques."
+            )
+    return main(**parametres)
+
+
 if __name__ == "__main__":
-    resultat_terminal = main()
+    resultat_terminal = lancer_terminal()
     reponses = resultat_terminal["reponses"]
