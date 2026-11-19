@@ -1,9 +1,9 @@
 from copy import deepcopy
 
 if __package__:
-    from .validation_profil import valider_budget_annuel, valider_type_etablissement
+    from .validation_profil import valider_budget_annuel, valider_type_etablissement, valider_note
 else:
-    from validation_profil import valider_budget_annuel, valider_type_etablissement
+    from validation_profil import valider_budget_annuel, valider_type_etablissement, valider_note
 
 
 def choisir_question_interets(interets):
@@ -200,7 +200,7 @@ def corriger_reponse(reponses, question_code, answer_text):
 
 
 
-def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False):
+def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None):
     """Adapte synchroniquement le questionnaire à un état échangeable en JSON.
 
     answers est un dictionnaire indexé par question_code.
@@ -208,6 +208,8 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
     Les métadonnées des questions et valeurs structurées sont recalculées.
     Aucun objet reçu n'est modifié et aucune persistance n'est effectuée.
     inclure_budget_type=True ajoute budget et type après les compétences.
+    matieres fournit les codes ordonnés des questions finales note:<code>.
+    La même liste doit être fournie à chaque appel de la session.
     Le mode est fourni par l'appelant à chaque appel, sans modifier le contrat
     d'état. Une ancienne session completed reste confirmée jusqu'à reopen.
     """
@@ -216,13 +218,24 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
     entrees = []
     errors = []
     status = "in_progress"
-    codes = set(QUESTIONS) | {"precision_interets"}
+    notes_questions = {}
+    if matieres is not None:
+        if (not isinstance(matieres, list)
+                or any(not isinstance(m, str) or not m.strip() for m in matieres)
+                or len(matieres) != len(set(matieres))):
+            errors.append("matieres doit être une liste ordonnée de codes textuels uniques non vides.")
+        else:
+            notes_questions = {f"note:{matiere}": matiere for matiere in matieres}
+    codes = set(QUESTIONS) | {"precision_interets"} | set(notes_questions)
     validations = {
         "budget_annuel_max": valider_budget_annuel,
         "type_etablissement": valider_type_etablissement,
     }
 
     def valider(code, texte):
+        if code in notes_questions:
+            retour = valider_note(texte)
+            return retour["value"], retour["errors"]
         if code in validations:
             retour = validations[code](texte)
             return retour["value"], retour["errors"]
@@ -230,16 +243,23 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
 
     def question_suivante():
         question = prochaine_question(valeurs)
-        if question is not None or not inclure_budget_type:
+        if question is not None:
             return question
-        # Les anciens profils confirmés restent lisibles ; reopen active
-        # ensuite les nouvelles questions sans confirmer à nouveau le profil.
-        if status == "completed" and not any(code in valeurs for code in validations):
-            return None
-        for code in validations:
-            if code not in valeurs:
-                return {"question_code": code, "question_text": QUESTIONS[code]}
+        ancien_budget = status == "completed" and not any(c in valeurs for c in validations)
+        if inclure_budget_type and not ancien_budget:
+            for code in validations:
+                if code not in valeurs:
+                    return {"question_code": code, "question_text": QUESTIONS[code]}
+        anciennes_notes = status == "completed" and not any(c in valeurs for c in notes_questions)
+        if not anciennes_notes:
+            for code, matiere in notes_questions.items():
+                if code not in valeurs:
+                    return {"question_code": code, "question_text": texte_note(matiere)}
         return None
+
+    def texte_note(matiere):
+        return (f"Note pour {matiere} sur 20 ? Entrée permet de passer "
+                "ou d'effacer la note en correction ; 0 est une vraie note. ")
 
     if etat is None:
         if action != "start":
@@ -277,6 +297,8 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
             errors.append("Un entretien completed doit avoir traité toutes les questions.")
 
     def texte_question(code):
+        if code in notes_questions:
+            return texte_note(notes_questions[code])
         if code == "precision_interets":
             return choisir_question_interets(valeurs.get("interets"))
         return QUESTIONS[code]
@@ -290,7 +312,11 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
         suivante = question_suivante()
         confirme = status == "completed" and suivante is None and not errors
         profil = creer_profil()
-        profil.update(valeurs)
+        profil.update({code: valeur for code, valeur in valeurs.items() if code not in notes_questions})
+        profil["notes"] = {
+            matiere: valeurs[code] for code, matiere in notes_questions.items()
+            if code in valeurs and valeurs[code] is not None
+        } or None
         profil["confirme"] = confirme
         nouvel_etat = initial if erreurs else {
             "status": status,
@@ -332,9 +358,9 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
     code = reponse.get("question_code")
     if not isinstance(code, str):
         return resultat(["question_code doit être une chaîne de caractères."])
-    if code in validations:
+    if code in validations or code in notes_questions:
         erreurs = []
-        if not inclure_budget_type:
+        if code in validations and not inclure_budget_type:
             erreurs.append("Le mode budget et type d'établissement n'est pas activé.")
         elif action == "answer":
             question = question_suivante()

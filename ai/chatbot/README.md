@@ -181,7 +181,7 @@ resultat = traiter_questionnaire(
 # La prochaine question réelle est ville_souhaitee, pas mobilite.
 ```
 
-`traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False)` est une fonction publique
+`traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None)` est une fonction publique
 **synchrone** : appel direct, sans `await`. Elle réutilise `traiter_reponse`
 et `corriger_reponse`. Aucun accès à une base, aucune sauvegarde, aucun
 `input`/`print` et aucun appel LLM ne sont effectués. Le terminal conserve son
@@ -191,8 +191,9 @@ fonctionnement actuel et n'utilise pas cet adaptateur.
 
 Le mode `inclure_budget_type` est **désactivé par défaut**. Avec `True`,
 l'adaptateur demande `budget_annuel_max`, puis `type_etablissement`, après
-`competences_declarees` et avant la confirmation. Les notes et les catégories
-ne sont pas ajoutées à ce parcours.
+`competences_declarees` et avant la confirmation. Les notes utilisent le
+paramètre indépendant `matieres` décrit ci-dessous ; les catégories ne sont
+pas ajoutées à ce parcours.
 
 P2 doit conserver le même réglage à chaque appel d'une même session :
 `start`, `answer`, `correct`, `confirm` et `reopen`. Ce réglage est géré par
@@ -227,6 +228,48 @@ Après les deux réponses, la session reste `in_progress` et non confirmée
 jusqu'à `confirm`. Une ancienne session `completed` sans ces réponses reste
 lisible et confirmée, même avec le mode activé. Après `reopen` avec ce mode,
 les deux questions sont proposées et une nouvelle confirmation est nécessaire.
+
+### Notes facultatives par matière pour P2
+
+Le paramètre optionnel `matieres` reçoit une liste ordonnée de codes textuels
+uniques et non vides. Sans liste (`None` ou `[]`), le parcours reste inchangé.
+P2 doit fournir **la même liste, dans le même ordre, à chaque appel de la
+session**, y compris pour `correct`, `confirm` et `reopen`. La liste n'est pas
+stockée dans l'état. Les vrais codes restent à valider avec P4/P5.
+
+```python
+matieres_session = ["matiere_fictive_a", "matiere_fictive_b"]  # Exemple de test.
+resultat = traiter_questionnaire(None, "start", matieres=matieres_session)
+# À chaque appel suivant, garder matieres=matieres_session.
+# Après les autres questions, next_question proposera note:matiere_fictive_a,
+# puis note:matiere_fictive_b.
+```
+
+Convention de code stable : `note:<code_matiere>`, par exemple
+`note:mathematiques` pour le code matière `mathematiques`. Ce code identifie
+la réponse dans `etat.answers`, `next_question` et `answers_to_save`. Le texte
+officiel de la question est construit par le module, jamais fourni par le client.
+Ces questions arrivent après le parcours existant, donc après le budget et
+le type si leur mode est activé, et avant la confirmation.
+
+`answer` respecte l'ordre des matières ; `correct` exige une question déjà
+traitée. Les deux actions utilisent `valider_note()` : nombre fini entre
+0 et 20 inclus, virgule ou point décimal. `answer_text` conserve exactement
+la saisie ; `answer_value` contient le nombre validé, ou `None` pour une
+réponse vide. Une valeur structurée envoyée par le client est ignorée.
+
+Une réponse vide, y compris par correction pour effacer une note, conserve
+l'entrée de réponse avec `answer_value: null` : la question reste traitée.
+Elle omet la matière de `profile.notes`. Il s'agit d'une réponse actualisée
+dans `answers_to_save`, pas d'une suppression dans `answer_codes_to_delete`.
+Le profil regroupe uniquement les notes renseignées, par exemple
+`"notes": {"mathematiques": 0.0}` ; si aucune note n'est renseignée,
+`"notes": null`. Les clés `note:...` ne sont pas ajoutées au profil.
+
+La dernière réponse ne confirme pas le profil : `confirm` reste nécessaire.
+Une session confirmée se relit avec la même liste. Une ancienne session
+confirmée sans aucune réponse de note reste confirmée ; après `reopen`,
+les matières fournies deviennent des questions à traiter.
 
 ### Entrées
 

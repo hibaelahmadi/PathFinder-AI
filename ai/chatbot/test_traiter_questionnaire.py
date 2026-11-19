@@ -5,6 +5,91 @@ from ai.chatbot.questionnaire import traiter_questionnaire
 
 
 class ContratQuestionnaireTests(unittest.TestCase):
+    def test_notes_cycle_complet_et_relecture(self):
+        matieres = ["matiere_fictive_b", "matiere_fictive_a"]
+
+        def appel(etat, action, code=None, texte=None):
+            reponse = None if code is None else {
+                "question_code": code, "answer_text": texte,
+                "answer_value": 99, "question_text": "FAUX",
+            }
+            avant = deepcopy((etat, reponse, matieres))
+            retour = traiter_questionnaire(etat, action, reponse,
+                                          inclure_budget_type=True, matieres=matieres)
+            self.assertEqual((etat, reponse, matieres), avant)
+            return retour
+
+        retour = appel(None, "start")
+        attendus = ["bac", "ville_souhaitee", "interets", "precision_interets",
+                    "mobilite", "objectif", "competences_declarees",
+                    "budget_annuel_max", "type_etablissement",
+                    "note:matiere_fictive_b", "note:matiere_fictive_a"]
+        textes = ["Sciences", "Rabat", "informatique", "jeux", "non", "ingénieur",
+                  "Python", "0", "privé", " 0 ", ""]
+        for code, texte in zip(attendus, textes):
+            self.assertEqual(retour["next_question"]["question_code"], code)
+            retour = appel(retour["etat"], "answer", code, texte)
+            self.assertFalse(retour["errors"])
+        self.assertEqual(retour["profile"]["notes"], {"matiere_fictive_b": 0.0})
+        self.assertNotIn("note:matiere_fictive_b", retour["profile"])
+        self.assertEqual(retour["etat"]["answers"]["note:matiere_fictive_b"]["answer_text"], " 0 ")
+        self.assertEqual(retour["etat"]["answers"]["note:matiere_fictive_b"]["answer_value"], 0.0)
+        self.assertIsNone(retour["etat"]["answers"]["note:matiere_fictive_a"]["answer_value"])
+        self.assertFalse(retour["profile_confirmed"])
+        retour = appel(retour["etat"], "correct", "note:matiere_fictive_a", " 15,5 ")
+        self.assertEqual(retour["answers_to_save"][0]["answer_value"], 15.5)
+        self.assertEqual(retour["answers_to_save"][0]["answer_text"], " 15,5 ")
+        retour = appel(retour["etat"], "correct", "note:matiere_fictive_a", " ")
+        self.assertEqual(retour["profile"]["notes"], {"matiere_fictive_b": 0.0})
+        self.assertIsNone(retour["next_question"])
+        confirme = appel(retour["etat"], "confirm")
+        self.assertFalse(confirme["errors"])
+        self.assertTrue(confirme["profile_confirmed"])
+        self.assertEqual(confirme["profile"]["notes"], {"matiere_fictive_b": 0.0})
+        relu = appel(confirme["etat"], "confirm")
+        self.assertTrue(relu["profile_confirmed"])
+        self.assertEqual(relu["profile"], confirme["profile"])
+        rouvert = appel(confirme["etat"], "reopen")
+        efface = appel(rouvert["etat"], "correct", "note:matiere_fictive_b", "")
+        self.assertIsNone(efface["profile"]["notes"])
+        self.assertIsNone(efface["next_question"])
+        self.assertTrue(appel(efface["etat"], "confirm")["profile_confirmed"])
+
+    def test_notes_erreurs_preservent_etat(self):
+        etat = self.remplir()["etat"]
+        for action, code, texte in [("answer", "note:fictive_b", "12"),
+                                     ("correct", "note:fictive_a", "12"),
+                                     ("answer", "note:inconnue", "12"),
+                                     ("answer", "note:fictive_a", "21"),
+                                     ("answer", "note:fictive_a", "NaN"),
+                                     ("answer", "note:fictive_a", 0)]:
+            avant = deepcopy(etat)
+            retour = traiter_questionnaire(etat, action,
+                {"question_code": code, "answer_text": texte}, matieres=["fictive_a", "fictive_b"])
+            self.assertTrue(retour["errors"])
+            self.assertEqual(etat, avant)
+            self.assertEqual(retour["etat"], avant)
+            self.assertEqual(retour["answers_to_save"], [])
+            self.assertEqual(retour["answer_codes_to_delete"], [])
+        self.assertTrue(traiter_questionnaire(etat, "confirm", matieres=["fictive_a"])["errors"])
+        for matieres in ("fictive", ["a", "a"], [1], [""]):
+            self.assertTrue(traiter_questionnaire(etat, "confirm", matieres=matieres)["errors"])
+
+    def test_notes_facultatives_sans_budget_et_ancienne_session(self):
+        etat = self.remplir()["etat"]
+        self.assertIsNone(traiter_questionnaire(etat, "confirm")["profile"]["notes"])
+        retour = traiter_questionnaire(etat, "answer",
+            {"question_code": "note:fictive", "answer_text": ""}, matieres=["fictive"])
+        self.assertFalse(retour["errors"])
+        self.assertIsNone(retour["profile"]["notes"])
+        confirme = traiter_questionnaire(retour["etat"], "confirm", matieres=["fictive"])
+        self.assertTrue(confirme["profile_confirmed"])
+        ancien = traiter_questionnaire(etat, "confirm")
+        relu = traiter_questionnaire(ancien["etat"], "confirm", matieres=["fictive"])
+        self.assertTrue(relu["profile_confirmed"])
+        rouvert = traiter_questionnaire(ancien["etat"], "reopen", matieres=["fictive"])
+        self.assertEqual(rouvert["next_question"]["question_code"], "note:fictive")
+
     def appel_budget_type(self, etat, action, code=None, texte=None):
         reponse = None if code is None else {
             "question_code": code, "answer_text": texte,
