@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, false, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -27,7 +28,7 @@ class QuestionnaireSession(Base):
         server_default="in_progress",
     )
     expected_question_code: Mapped[str | None] = mapped_column(String(100))
-    profile: Mapped[dict[str, str | bool | None] | None] = mapped_column(
+    profile: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB(none_as_null=True)
     )
     profile_confirmed: Mapped[bool] = mapped_column(

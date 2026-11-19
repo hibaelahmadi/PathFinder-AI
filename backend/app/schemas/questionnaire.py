@@ -11,7 +11,7 @@ class QuestionnaireSessionRead(BaseModel):
     user_id: int
     status: Literal["in_progress", "completed"]
     expected_question_code: str | None
-    profile: dict[str, str | bool | None] | None
+    profile: dict[str, JsonValue] | None
     profile_confirmed: bool
     created_at: datetime
 
@@ -79,6 +79,6 @@ class QuestionnaireResult(BaseModel):
     next_question: QuestionnaireQuestion | None
     answers_to_save: list[QuestionnaireAnswerData]
     answer_codes_to_delete: list[str]
-    profile: dict[str, str | bool | None]
+    profile: dict[str, JsonValue]
     profile_confirmed: bool
     errors: list[str]

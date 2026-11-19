@@ -279,6 +279,20 @@ The returned result follows the module contract, including `etat`,
 The session profile contains the module's original fields, including
 `competences_declarees` and boolean `confirme`. Confirmation validates the
 summary and does not guarantee all recommendation inputs are available.
+
+The backend also accepts Person 3's planned profile fields:
+
+- `notes`: an object mapping subject identifiers to numeric grades from 0 to 20,
+  or `null`. Subjects without a grade are omitted.
+- `budget_annuel_max`: a nonnegative number or `null`, representing annual tuition
+  in MAD, excluding registration fees, housing, and transport.
+- `type_etablissement`: `"public"`, `"prive"`, or `null` for no preference or unknown.
+
+The questionnaire module validates these values; the backend preserves their
+JSON types in the existing JSONB column. Original textual answers remain saved
+separately. These storage changes do not add the new questions to the chatbot.
+Subject and category identifiers remain to be agreed with Person 4.
+
 The normalized `/profiles/me` record is maintained separately until its
 mapping to the questionnaire profile is agreed with Person 5.
 
