@@ -1,0 +1,206 @@
+[
+  {
+    "interest": "data_ia",
+    "pattern": "data|donnee|intelligence artificielle|artificial intelligence|statisti",
+    "skills": [
+      "analyse_statistique",
+      "programmation"
+    ],
+    "career_candidates": [
+      "analyste_donnees"
+    ],
+    "description": "Analyse de données et modèles statistiques",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "informatique",
+    "pattern": "informati|computer|software|numerique|digital|cyber|reseau|cloud",
+    "skills": [
+      "raisonnement_logique",
+      "programmation"
+    ],
+    "career_candidates": [
+      "developpeur_logiciel",
+      "administrateur_reseaux"
+    ],
+    "description": "Logiciels, systèmes et technologies numériques",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "sante",
+    "pattern": "sante|medical|medec|pharma|infirm|kinesi|optique|dentaire|paramed|sage femme|reeducation",
+    "skills": [
+      "analyse",
+      "communication"
+    ],
+    "career_candidates": [
+      "professionnel_sante"
+    ],
+    "description": "Santé, soins et techniques associées",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "agriculture",
+    "pattern": "agro|agric|horti|animal|plante|vegetal|arbori",
+    "skills": [
+      "experimentation_scientifique",
+      "analyse"
+    ],
+    "career_candidates": [],
+    "description": "Agriculture et productions biologiques",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "commerce_gestion",
+    "pattern": "gestion|management|commerce|business|marketing|audit|comptab|logistique|supply|entrepren",
+    "skills": [
+      "organisation",
+      "communication"
+    ],
+    "career_candidates": [
+      "chef_projet"
+    ],
+    "description": "Gestion des organisations et activités économiques",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "economie_finance",
+    "pattern": "financ|econom|actuari|banque|bancaire",
+    "skills": [
+      "analyse",
+      "analyse_statistique"
+    ],
+    "career_candidates": [
+      "analyste_financier"
+    ],
+    "description": "Économie, finance et décision",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "arts_design",
+    "pattern": "design|art |arts |architect|cinema|audiovis|graphique",
+    "skills": [
+      "creativite",
+      "gestion_projet"
+    ],
+    "career_candidates": [],
+    "description": "Conception, création et production visuelle",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "education",
+    "pattern": "education|enseignement|pedagog",
+    "skills": [
+      "communication",
+      "organisation"
+    ],
+    "career_candidates": [
+      "enseignant"
+    ],
+    "description": "Sciences de l’éducation et formation",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "tourisme_hotellerie",
+    "pattern": "touris|hotel|hospitality|restauration",
+    "skills": [
+      "communication",
+      "langues_etrangeres"
+    ],
+    "career_candidates": [],
+    "description": "Tourisme, accueil et services",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "droit",
+    "pattern": "droit|juridi",
+    "skills": [
+      "analyse",
+      "expression_ecrite"
+    ],
+    "career_candidates": [
+      "juriste"
+    ],
+    "description": "Droit et analyse juridique",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "lettres_langues",
+    "pattern": "langue|lettre|communication|journalis|humanities",
+    "skills": [
+      "expression_ecrite",
+      "communication"
+    ],
+    "career_candidates": [],
+    "description": "Langues, communication et culture",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "sciences_humaines",
+    "pattern": "psycholog|social|international studies|territorial",
+    "skills": [
+      "analyse",
+      "recherche_documentaire"
+    ],
+    "career_candidates": [],
+    "description": "Sociétés, comportements et territoires",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "biologie",
+    "pattern": "biolog|biotech|vie|genetique",
+    "skills": [
+      "experimentation_scientifique",
+      "analyse"
+    ],
+    "career_candidates": [
+      "biologiste"
+    ],
+    "description": "Étude du vivant et applications",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "mathematiques",
+    "pattern": "mathem|maths",
+    "skills": [
+      "raisonnement_logique",
+      "analyse"
+    ],
+    "career_candidates": [],
+    "description": "Mathématiques et modélisation",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "physique",
+    "pattern": "physique|chimie",
+    "skills": [
+      "experimentation_scientifique",
+      "resolution_problemes"
+    ],
+    "career_candidates": [],
+    "description": "Sciences physiques et chimiques",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "environnement",
+    "pattern": "environnement|environment|durable|sustainab|renewable|ecolog",
+    "skills": [
+      "analyse",
+      "gestion_projet"
+    ],
+    "career_candidates": [],
+    "description": "Environnement et développement durable",
+    "status": "editorial_provisoire"
+  },
+  {
+    "interest": "ingenierie",
+    "pattern": "genie|engineering|ingenie|mecani|electri|industri|energi|electron|telecom|preparatoire",
+    "skills": [
+      "resolution_problemes",
+      "gestion_projet"
+    ],
+    "career_candidates": [],
+    "description": "Conception de systèmes et procédés techniques",
+    "status": "editorial_provisoire"
+  }
+]

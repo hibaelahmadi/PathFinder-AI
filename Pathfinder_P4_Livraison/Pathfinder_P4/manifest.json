@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "built_at": "2026-11-18",
+  "counts": {
+    "institutions": 633,
+    "programs": 1699,
+    "sources": 40,
+    "accreditation_history": 2932,
+    "admissions": 9,
+    "careers": 16,
+    "program_careers": 1747,
+    "program_sources": 1699,
+    "pathways": 5,
+    "id_crosswalk": 75,
+    "quality_issues": 8,
+    "exploration_programs": 87,
+    "chunks": 2332
+  },
+  "national_exhaustive": false,
+  "current_admissions_verified": 0,
+  "cost_definition": {
+    "champ_catalogue": "annual_cost_mad",
+    "champ_API": "annual_cost",
+    "unite": "MAD_par_an",
+    "definition": "frais_de_scolarite_annuels_uniquement",
+    "exclus": [
+      "frais_inscription",
+      "logement",
+      "transport",
+      "fournitures"
+    ],
+    "null": "non_verifie",
+    "zero": "gratuit_officiellement_confirme"
+  },
+  "ui_inspected": true
+}

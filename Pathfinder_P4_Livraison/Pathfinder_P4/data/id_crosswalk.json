@@ -1,0 +1,457 @@
+[
+  {
+    "previous_id": "i01",
+    "new_id": "PUB056",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i02",
+    "new_id": "PUB060",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i03",
+    "new_id": "PUB058",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i04",
+    "new_id": "I-57d175d34ba237",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i05",
+    "new_id": "PUB127",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i06",
+    "new_id": "PUB055",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i07",
+    "new_id": "I-62bf0d5134a293",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i08",
+    "new_id": "I-9a40f25cb7350d",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i09",
+    "new_id": "I-60cd9e2253032b",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i10",
+    "new_id": "I-6edb205a47aab4",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "i11",
+    "new_id": "I-f2e62bfc39ea88",
+    "entity": "institution",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p001",
+    "new_id": "P-6fd39fcdac2e87",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p002",
+    "new_id": "P-d07f0a73c8056f",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p003",
+    "new_id": "P-6aad402e4109fa",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p004",
+    "new_id": "P-28993a944cf261",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p005",
+    "new_id": "P-63b51f25433963",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p006",
+    "new_id": "P-b9272f837bd6f1",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p007",
+    "new_id": "P-9fe8c217e5ce41",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p008",
+    "new_id": "P-affba31c36f571",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p009",
+    "new_id": "P-75136a365e753e",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p010",
+    "new_id": "P-713553697e0dd5",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p011",
+    "new_id": "P-f98dbddcd12163",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p012",
+    "new_id": "P-91b2f4174de720",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p013",
+    "new_id": "P-bda265dec5155e",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p014",
+    "new_id": "P-0c6fb3cec056dc",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p015",
+    "new_id": "P-57cc8bda15659e",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p016",
+    "new_id": "P-fdbbb504c87871",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p017",
+    "new_id": "P-d044fc899c70ea",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p018",
+    "new_id": "P-f3862052f5b28c",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p019",
+    "new_id": "P-34ce387ece8e81",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p020",
+    "new_id": "P-6bac1cfb4f245d",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p021",
+    "new_id": "P-9dcf9341da3b70",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p022",
+    "new_id": "P-54e863c7efd416",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p023",
+    "new_id": "P-42419130c0878b",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p024",
+    "new_id": "P-c0cffa02ec72ed",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p025",
+    "new_id": "P-abea2430bbeb08",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p026",
+    "new_id": "P-bac3a957ba742e",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p027",
+    "new_id": "P-014549dbb3fb87",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p028",
+    "new_id": "P-bf16ff2cf8b703",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p029",
+    "new_id": "P-3f3e679b7337ef",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p030",
+    "new_id": "P-db558f8430af05",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p031",
+    "new_id": "P-b1b6cc5f191b63",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p032",
+    "new_id": "P-c81e3855d33e37",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p033",
+    "new_id": "P-ab2bfc4a1c622a",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p034",
+    "new_id": "P-ace0de0136cf00",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p035",
+    "new_id": "P-bf86bbc8cdab88",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p036",
+    "new_id": "P-6fce2dd7b4a6f0",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p037",
+    "new_id": "P-f9bab4bb8d054e",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p038",
+    "new_id": "P-d59098e8110018",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p039",
+    "new_id": "P-8c80bfcae34284",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p040",
+    "new_id": "P-42129ae22695f5",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p041",
+    "new_id": "P-017246f3865b53",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p042",
+    "new_id": "P-ea641f7cdf9a16",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p043",
+    "new_id": "P-9c1abacfe7fe9a",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p044",
+    "new_id": "P-793aaf39b43a31",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p045",
+    "new_id": "P-41d5ca40120761",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p046",
+    "new_id": "P-a9f2d1910bdc72",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p047",
+    "new_id": "P-0e0a0e69e72269",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p048",
+    "new_id": "P-84c78dd934dc90",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p049",
+    "new_id": "P-f778342241a493",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p050",
+    "new_id": "P-f974a2556bb274",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p051",
+    "new_id": "P-09d2680ae8edd5",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p052",
+    "new_id": "P-a5f4d5f3330e1b",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p053",
+    "new_id": "P-eb6150c161b260",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p054",
+    "new_id": "P-0daf240413acf0",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p055",
+    "new_id": "P-33a5559ee61a7a",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p056",
+    "new_id": "P-035fba786ab5b5",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p057",
+    "new_id": "P-9dc7b8d87cfe12",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "p058",
+    "new_id": "P-6daee3135c1f96",
+    "entity": "program",
+    "previous_file": "Pathfinder_Jour1"
+  },
+  {
+    "previous_id": "inst-001",
+    "new_id": "PUB052",
+    "entity": "institution",
+    "previous_file": "Pathfinder_P4_Catalogue_Vocabulaire_P3_P5"
+  },
+  {
+    "previous_id": "prog-001",
+    "new_id": null,
+    "entity": "program",
+    "previous_file": "Pathfinder_P4_Catalogue_Vocabulaire_P3_P5",
+    "reason": "Fiches anciennes spécifiques conservées dans le fichier précédent; pas de fusion avec un tronc commun."
+  },
+  {
+    "previous_id": "prog-002",
+    "new_id": null,
+    "entity": "program",
+    "previous_file": "Pathfinder_P4_Catalogue_Vocabulaire_P3_P5",
+    "reason": "Fiches anciennes spécifiques conservées dans le fichier précédent; pas de fusion avec un tronc commun."
+  },
+  {
+    "previous_id": "prog-003",
+    "new_id": null,
+    "entity": "program",
+    "previous_file": "Pathfinder_P4_Catalogue_Vocabulaire_P3_P5",
+    "reason": "Fiches anciennes spécifiques conservées dans le fichier précédent; pas de fusion avec un tronc commun."
+  },
+  {
+    "previous_id": "prog-004",
+    "new_id": null,
+    "entity": "program",
+    "previous_file": "Pathfinder_P4_Catalogue_Vocabulaire_P3_P5",
+    "reason": "Fiches anciennes spécifiques conservées dans le fichier précédent; pas de fusion avec un tronc commun."
+  },
+  {
+    "previous_id": "prog-005",
+    "new_id": null,
+    "entity": "program",
+    "previous_file": "Pathfinder_P4_Catalogue_Vocabulaire_P3_P5",
+    "reason": "Fiches anciennes spécifiques conservées dans le fichier précédent; pas de fusion avec un tronc commun."
+  }
+]

@@ -1,0 +1,1 @@
+{"algorithm": "TF-IDF + TruncatedSVD/LSA", "dimensions": 128, "random_state": 42, "corpus_sha256": "ffdfe79e8380dfde30596fef2a4dc7275c7acbf0c3914302bf992325e150868c", "neural_embeddings": false, "documents": 2332}
