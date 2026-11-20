@@ -69,6 +69,16 @@ def calculate_score(student, program):
     if not scores:
         return None
 
+    # Les critères inconnus n'apportent aucun point.
+    # Chaque critère conserve son poids initial :
+    # une préférence public/privé seule vaut au maximum 10 points.
+    weighted_score = sum(
+        WEIGHTS[key] * value
+        for key, value in scores.items()
+    )
+
+    return round(100 * weighted_score, 2)
+
     available_weight = sum(WEIGHTS[key] for key in scores)
 
     weighted_score = sum(
