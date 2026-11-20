@@ -53,3 +53,34 @@ def adapt_student_profile(profile):
 
         "profile_confirmed": profile.get("confirme") is True,
     }
+
+def adapt_p4_program(program, institution):
+    """Adapte une formation P4 avec son établissement."""
+    if program["institution_id"] != institution["institution_id"]:
+        raise ValueError("La formation et l'établissement ne correspondent pas.")
+
+    adapted = program.copy()
+
+    # Identifiant P4 conservé comme chaîne.
+    adapted["id"] = program["program_id"]
+    adapted["code"] = program["program_id"]
+
+    sector = institution.get("sector")
+    adapted["type"] = sector if sector in ("public", "prive") else None
+
+    adapted["institution_name"] = institution.get("name")
+    adapted["city_status"] = institution.get("city_status")
+
+    # Une ville de rattachement ou un réseau ne suffit pas
+    # à exclure une formation pour mobilité impossible.
+    entity_type = institution.get("entity_type") or ""
+    uncertain_city = (
+        institution.get("city_status") != "registre"
+        or entity_type.startswith("reseau")
+    )
+
+    adapted["city"] = (
+        None if uncertain_city else institution.get("city")
+    )
+
+    return adapted
