@@ -78,7 +78,8 @@ Press Ctrl+C in the terminal to stop the server.
 - Questionnaire session creation and owner-protected reading are implemented.
 - Questionnaire answers, corrections, confirmation, and reopening are connected
   to Person 3's questionnaire module.
-- Recommendation engine integration remains pending.
+- Owner-protected recommendations use a confirmed questionnaire profile,
+  Person 5's engine, and Person 4's exploration catalogue.
 ## Run tests
 
 From the backend folder, install the development dependencies:
@@ -299,3 +300,57 @@ mapping to the questionnaire profile is agreed with Person 5.
 The connected flow was verified against `pathfinder_test_db`, including
 skipped answers, confirmation, reopening, dependency deletion, ownership,
 validation rollback, simulated persistence failure, and simultaneous actions.
+
+## Recommendations
+
+`GET /sessions/{session_id}/recommendations?top_n=5` uses the authenticated
+owner's saved profile. It returns 401 without authentication, 404 for a missing
+or another user's session, and 409 until the session and its profile are
+confirmed. Reopening a questionnaire blocks recommendations until reconfirmed.
+`top_n` accepts 1 to 100; invalid values return 422.
+
+The response contains `recommendations` and `location_to_verify`, with a total
+candidate count for each. When mobility is refused, formations in the requested
+city appear in `recommendations`; formations without a usable location appear
+separately in `location_to_verify`. Each list returns up to `top_n` results.
+If the preferred city is unknown, all retained formations go into the second
+list. With mobility allowed or undecided, `recommendations` contains the
+engine's overall ranking and `location_to_verify` is empty. Nullable city and
+constraint reasons still identify unknown locations.
+
+Scores and explanations come from Person 5's engine at commit `45b3fe2`.
+Missing inputs are allowed; scores can be null and unknown admission, cost,
+or location information remains explicitly flagged. The unresolved comparison
+between Person 3's 12 and Person 5's 11 matching-city formations is not treated
+as a validated agreement.
+
+The backend passes the saved questionnaire profile to P5's adapter unchanged.
+It does not infer structured interest/skill categories from free text. This
+version of the adapter uses `bac`, not the proposed `code_bac`; harmonizing bac
+codes and the subject/category vocabulary remains a team integration task.
+
+The two JSON files in `Pathfinder_P4_Livraison/Pathfinder_P4/data` were retrieved
+unchanged from `main` commit `b9db7a74d8d2c467e1321459140677427c450eae`:
+`institutions.json` and `programs_exploration.json` (87 formations). This endpoint
+reads that snapshot directly; it does not import it into PostgreSQL. P4 string
+identifiers remain strings and must not be used as numeric catalogue API IDs.
+Source references, catalogue status, provisional matching status, and notes are
+returned alongside each result. Exploration results do not establish current
+admission availability. A missing or unreadable catalogue returns 503.
+
+Local API checks against the test database reproduced P5's 46 retained
+formations (11 matching Rabat, 35 with location to verify), checked ranking
+parity, authentication, ownership, confirmation/reopening, zero budget, empty
+results, and unavailable catalogue handling. Test records were rolled back.
+
+Reinstall the editable backend after pulling to include `ai.recommendation`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+Run Person 5's catalogue demo from the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m ai.recommendation.demo_catalogue
+```

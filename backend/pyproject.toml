@@ -27,4 +27,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = [".", ".."]
-include = ["app", "app.*", "ai", "ai.chatbot", "ai.chatbot.*"]
+include = [
+    "app", "app.*", "ai", "ai.chatbot", "ai.chatbot.*",
+    "ai.recommendation", "ai.recommendation.*",
+]
