@@ -1,0 +1,76 @@
+[
+  {
+    "pathway_id": "route-ingenieur",
+    "title": "Préparation intégrée puis ingénierie",
+    "steps": [
+      "Baccalauréat",
+      "Cycle préparatoire intégré",
+      "Cycle ingénieur et spécialisation"
+    ],
+    "source_ids": [
+      "s02",
+      "s07",
+      "ENAM"
+    ],
+    "status": "structure_generale",
+    "notes": "Admission initiale et orientation interne sous conditions. Pas de spécialité garantie dès le bac."
+  },
+  {
+    "pathway_id": "route-cpge",
+    "title": "CPGE puis concours",
+    "steps": [
+      "Baccalauréat",
+      "CPGE",
+      "Concours adapté à la filière",
+      "École selon affectation"
+    ],
+    "source_ids": [
+      "CPGE"
+    ],
+    "status": "structure_generale",
+    "notes": "Ne pas confondre le CNC après CPGE avec le concours post-bac ENSA."
+  },
+  {
+    "pathway_id": "route-licence",
+    "title": "Licence puis poursuite",
+    "steps": [
+      "Baccalauréat",
+      "Licence",
+      "Candidature à un master ou une passerelle documentée"
+    ],
+    "source_ids": [
+      "s14"
+    ],
+    "status": "possibilite_generale",
+    "notes": "Aucune admission automatique ni master précis confirmé."
+  },
+  {
+    "pathway_id": "route-court",
+    "title": "Formation courte professionnelle",
+    "steps": [
+      "Baccalauréat",
+      "Formation DUT, BTS ou technicien spécialisé selon admission",
+      "Emploi ou candidature à une poursuite compatible"
+    ],
+    "source_ids": [
+      "s03",
+      "OFPPT-DIG"
+    ],
+    "status": "illustratif",
+    "notes": "Ces diplômes sont distincts. Aucune équivalence automatique ni poursuite garantie."
+  },
+  {
+    "pathway_id": "route-agronomie",
+    "title": "Agronomie ENA Meknès",
+    "steps": [
+      "Baccalauréat",
+      "Préparation intégrée de deux ans",
+      "Cycle ingénieur de trois ans, spécialisation interne"
+    ],
+    "source_ids": [
+      "ENAM"
+    ],
+    "status": "structure_generale",
+    "notes": "Sélection et choix de spécialité à vérifier."
+  }
+]

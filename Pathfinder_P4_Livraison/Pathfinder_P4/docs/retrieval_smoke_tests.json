@@ -1,0 +1,49 @@
+[
+  {
+    "query": "ENSA Marrakech cycle préparatoire",
+    "filter": "PUB056",
+    "results": 3,
+    "source_ids": [
+      "s02",
+      "REG01",
+      "s01"
+    ]
+  },
+  {
+    "query": "chimie licence",
+    "filter": "PUB005",
+    "results": 3,
+    "source_ids": [
+      "FSR",
+      "FSR",
+      "FSR"
+    ]
+  },
+  {
+    "query": "mathématiques informatique",
+    "filter": "PUB052",
+    "results": 1,
+    "source_ids": [
+      "FSSM"
+    ]
+  },
+  {
+    "query": "commerce gestion",
+    "filter": "PUB058",
+    "results": 2,
+    "source_ids": [
+      "s04",
+      "REG01"
+    ]
+  },
+  {
+    "query": "médecine pharmacie",
+    "filter": "PUB055",
+    "results": 3,
+    "source_ids": [
+      "s10",
+      "REG01",
+      "s09"
+    ]
+  }
+]

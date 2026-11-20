@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pathfinder P4 Program",
+  "type": "object",
+  "required": [
+    "program_id",
+    "institution_id",
+    "name",
+    "description",
+    "degree_type",
+    "duration_months",
+    "duration_scope",
+    "entry_route",
+    "direct_post_bac",
+    "annual_cost",
+    "annual_cost_currency",
+    "accepted_bac_types",
+    "required_subjects",
+    "interests",
+    "skills",
+    "career_paths",
+    "matching_status",
+    "curriculum_summary",
+    "options",
+    "source_id",
+    "source_locator",
+    "academic_year",
+    "checked_at",
+    "status",
+    "admissions_current_verified",
+    "application_open",
+    "accreditation_start",
+    "accreditation_end",
+    "accreditation_status",
+    "notes",
+    "field",
+    "matching_basis",
+    "career_paths_status",
+    "exploration_visible"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "program_id": {
+      "type": "string"
+    },
+    "institution_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "degree_type": {
+      "type": "string"
+    },
+    "duration_months": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "duration_scope": {
+      "type": "string"
+    },
+    "entry_route": {
+      "type": "string"
+    },
+    "direct_post_bac": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "annual_cost": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "annual_cost_currency": {
+      "type": "string"
+    },
+    "accepted_bac_types": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_subjects": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "interests": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "career_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "matching_status": {
+      "type": "string"
+    },
+    "curriculum_summary": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "options": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "source_locator": {
+      "type": "string"
+    },
+    "academic_year": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "checked_at": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "admissions_current_verified": {
+      "type": "boolean"
+    },
+    "application_open": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "accreditation_start": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "accreditation_end": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "accreditation_status": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "field": {
+      "type": "string"
+    },
+    "matching_basis": {
+      "type": "string"
+    },
+    "career_paths_status": {
+      "type": "string"
+    },
+    "exploration_visible": {
+      "type": "boolean"
+    }
+  }
+}
