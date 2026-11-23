@@ -18,7 +18,8 @@ def adapt_student_profile(profile):
     }
 
     return {
-        "bac_type": profile.get("bac"),
+        "bac_type": profile.get("code_bac"),
+        "bac_text": profile.get("bac"),
         "preferred_city": profile.get("ville_souhaitee"),
         "can_relocate": mobility_mapping.get(mobility),
         "other_cities_text": profile.get("autres_villes"),
