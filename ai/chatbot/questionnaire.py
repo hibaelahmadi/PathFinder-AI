@@ -1,8 +1,10 @@
 from copy import deepcopy
 
 if __package__:
+    from .serie_bac import reconnaitre_sciences_mathematiques
     from .validation_profil import valider_budget_annuel, valider_type_etablissement, valider_note
 else:
+    from serie_bac import reconnaitre_sciences_mathematiques
     from validation_profil import valider_budget_annuel, valider_type_etablissement, valider_note
 
 
@@ -44,6 +46,7 @@ QUESTIONS = {
         "Quel type d'établissement préfères-tu : public, privé ou sans préférence ? "
         "Cette réponse est facultative : appuie sur Entrée pour passer. "
     ),
+    "precision_bac": "Ta série est-elle Sciences mathématiques A ou B ? (A / B / je ne sais pas ; Entrée pour passer) ",
     "bac": "Quelle est ta série de bac ? ",
     "ville_souhaitee": "Dans quelle ville souhaites-tu étudier ? ",
     "interets": "Quelles matières ou activités aimes-tu ? ",
@@ -74,6 +77,7 @@ def creer_profil():
         "budget_annuel_max": None,
         "type_etablissement": None,
         "bac": None,
+        "code_bac": None,
         "ville_souhaitee": None,
         "interets": None,
         "precision_interets": None,
@@ -83,10 +87,19 @@ def creer_profil():
         "competences_declarees": None,
         "confirme": False,
     }
+def calculer_code_bac(reponses):
+    reconnaissance = reconnaitre_sciences_mathematiques(reponses.get("bac") or "")
+    lettre = reconnaissance["code"]
+    if reconnaissance["clarification_needed"]:
+        lettre = reponses.get("precision_bac")
+    return f"sciences_mathematiques_{lettre.lower()}" if lettre in ("A", "B") else None
+
+
 def prochaine_question(reponses):
     """Renvoie la prochaine question, ou None si le résumé est prêt."""
     ordre = [
         "bac",
+        "precision_bac",
         "ville_souhaitee",
         "interets",
         "precision_interets",
@@ -97,6 +110,9 @@ def prochaine_question(reponses):
     ]
 
     for code in ordre:
+        if code == "precision_bac" and not reconnaitre_sciences_mathematiques(
+                reponses.get("bac") or "")["clarification_needed"]:
+            continue
         # On demande les autres villes seulement si la mobilité est acceptée.
         if code == "autres_villes":
             if reponses.get("mobilite") != "oui":
@@ -124,6 +140,16 @@ def _valider_reponse(question_code, answer_text):
     if not isinstance(answer_text, str):
         return None, ["La réponse doit être une chaîne de caractères."]
 
+    if question_code == "precision_bac":
+        valeur = answer_text.strip().casefold()
+        if valeur in ("", "je ne sais pas"):
+            return None, []
+        if valeur in ("a", "b"):
+            return valeur.upper(), []
+        code = reconnaitre_sciences_mathematiques(answer_text)["code"]
+        if code:
+            return code, []
+        return None, ["Écris A, B, je ne sais pas ou laisse la réponse vide."]
     valeur = answer_text.strip()
     if question_code == "mobilite":
         valeur = valeur.lower()
@@ -181,6 +207,7 @@ def corriger_reponse(reponses, question_code, answer_text):
         actualisees[question_code] = valeur
         if valeur != reponses[question_code]:
             dependances = {
+                "bac": "precision_bac",
                 "interets": "precision_interets",
                 "mobilite": "autres_villes",
             }
@@ -275,7 +302,10 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
         return _valider_reponse(code, texte)
 
     def question_suivante():
-        question = prochaine_question(valeurs)
+        lecture = valeurs
+        if status == "completed" and "precision_bac" not in valeurs:
+            lecture = {**valeurs, "precision_bac": None}
+        question = prochaine_question(lecture)
         if question is not None:
             return question
         ancien_budget = status == "completed" and not any(c in valeurs for c in validations)
@@ -350,6 +380,10 @@ def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=Fal
             matiere: valeurs[code] for code, matiere in notes_questions.items()
             if code in valeurs and valeurs[code] is not None
         } or None
+        for entree in entrees:
+            if entree["question_code"] == "bac" and valeurs.get("bac") is not None:
+                profil["bac"] = entree["answer_text"]
+        profil["code_bac"] = calculer_code_bac(valeurs)
         profil["confirme"] = confirme
         if enrichir_profil and action == "confirm" and confirme and not erreurs:
             _enrichir_profil(profil, entrees, codes_interets, codes_competences, codes_metiers)

@@ -316,6 +316,32 @@ sur une session déjà `completed` reste refusée, sans appel Gemini.
 
 ### Entrées
 
+#### Série Sciences mathématiques A/B
+
+Le terminal et l'adaptateur ajoutent `code_bac` au profil :
+`sciences_mathematiques_a`, `sciences_mathematiques_b` ou `null` (draft-1).
+La réponse initiale reste dans `bac`, avec son texte original lorsqu'elle
+est renseignée ; une réponse vide conserve la convention `null`.
+Dans l'état P2, `answers.bac.answer_text` conserve toujours la saisie exacte,
+et `answer_value` conserve la série normalisée, pas le code A/B.
+
+Une mention A/B explicite suffit. Pour « Sciences mathématiques » sans
+précision, `next_question` propose `precision_bac` immédiatement après `bac`,
+avant la ville. Répondre via `answer` avec A, B, un libellé explicite,
+« je ne sais pas » ou une chaîne vide. Une précision traitée mais inconnue
+reste dans `answers` avec `answer_value: null` et n'est pas redemandée.
+Une saisie ambiguë à cette question est refusée sans changer l'état.
+
+Une modification du bac supprime l'ancienne `precision_bac`, signalée dans
+`answer_codes_to_delete`, et recalcule `code_bac`. Si la nouvelle série reste
+générale, une nouvelle précision est nécessaire. Le terminal reprend aussi
+ce parcours depuis son menu de correction du bac. Aucun appel Gemini n'est
+nécessaire. Aucun autre code de série n'est déduit.
+
+Les anciennes sessions `completed` sans précision restent lisibles et
+confirmées, avec `code_bac: null` pour une série générale. Après `reopen`,
+la précision manquante est demandée avant une nouvelle confirmation.
+
 `answers` est un **dictionnaire indexé par question_code**, conformément au
 contrat P2. `reponse` est un dictionnaire pour `answer` et `correct`.
 

@@ -7,6 +7,7 @@ from questionnaire import (
     choisir_question_interets,
     QUESTIONS,
     creer_profil,
+    calculer_code_bac,
     corriger_reponse,
     prochaine_question,
     traiter_reponse,
@@ -158,6 +159,8 @@ def completer_questionnaire(reponses, codes_interets=None, codes_competences=Non
             print(erreur)
 
         reponses = resultat["reponses"]
+        if question["question_code"] == "bac" and not resultat["errors"] and reponse.strip():
+            reponses["bac"] = reponse
         if question["question_code"] == "competences_declarees" and codes_competences and not resultat["errors"]:
             actualiser_competences(reponses, reponse, codes_competences)
         if question["question_code"] == "objectif" and codes_metiers and not resultat["errors"]:
@@ -198,6 +201,8 @@ def main(matieres=None, codes_interets=None, codes_competences=None, codes_metie
     while True:
         profil = creer_profil()
         profil.update(reponses)
+        profil["code_bac"] = calculer_code_bac(reponses)
+        print("Code de série du bac :", profil["code_bac"] or "Non renseigné")
         print("\n--- Profil à vérifier ---")
 
         for numero, (cle, titre) in champs.items():
@@ -267,6 +272,8 @@ def main(matieres=None, codes_interets=None, codes_competences=None, codes_metie
             print(erreur)
 
         reponses = resultat["reponses"]
+        if cle == "bac" and not resultat["errors"] and reponse.strip():
+            reponses["bac"] = reponse
         if not resultat["errors"]:
             if cle == "objectif" and codes_metiers:
                 actualiser_objectif(reponses, reponse, codes_metiers)

@@ -294,7 +294,7 @@ class ContratQuestionnaireTests(unittest.TestCase):
                 "bac": {
                     "question_code": "bac",
                     "question_text": "Quelle est ta série de bac ?",
-                    "answer_text": "Sciences mathématiques",
+                    "answer_text": "Sciences mathématiques A",
                     "answer_value": None,
                 }
             },
@@ -311,7 +311,7 @@ class ContratQuestionnaireTests(unittest.TestCase):
         self.assertEqual(etat, initial)
         self.assertEqual(reponse, originale)
         self.assertIsInstance(retour["etat"]["answers"], dict)
-        self.assertEqual(retour["etat"]["answers"]["bac"]["answer_value"], "Sciences mathématiques")
+        self.assertEqual(retour["etat"]["answers"]["bac"]["answer_value"], "Sciences mathématiques A")
         self.assertEqual(retour["etat"]["answers"]["ville_souhaitee"]["answer_text"], " Rabat ")
         self.assertEqual(retour["profile"]["ville_souhaitee"], "Rabat")
         self.assertEqual(retour["next_question"]["question_code"], "interets")
@@ -358,7 +358,7 @@ class ContratQuestionnaireTests(unittest.TestCase):
         retour["etat"]["answers"]["bac"]["answer_value"] = {"faux": [1]}
         retour["etat"]["answers"]["bac"]["question_text"] = "FAUX"
         suite = self.envoyer(retour["etat"], "answer", "ville_souhaitee", "Rabat")
-        self.assertEqual(suite["profile"]["bac"], "Sciences")
+        self.assertEqual(suite["profile"]["bac"], " Sciences ")
 
     def test_corrections_dependantes(self):
         etat = self.remplir("oui")["etat"]
