@@ -1,0 +1,92 @@
+[
+  {
+    "admission_id": "A-p018",
+    "program_id": "P-f3862052f5b28c",
+    "criterion_type": "procedure_generale",
+    "value": "Présélection puis TAFEM, selon brochure générale.",
+    "academic_year": null,
+    "source_id": "s04",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-p024",
+    "program_id": "P-c0cffa02ec72ed",
+    "criterion_type": "procedure_generale",
+    "value": "Concours national post-bac ; règles annuelles à confirmer.",
+    "academic_year": null,
+    "source_id": "s07",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-p036",
+    "program_id": "P-6fce2dd7b4a6f0",
+    "criterion_type": "procedure_generale",
+    "value": "Concours selon modalités ministérielles.",
+    "academic_year": null,
+    "source_id": "s10",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-p037",
+    "program_id": "P-f9bab4bb8d054e",
+    "criterion_type": "procedure_generale",
+    "value": "Dossier et entretien selon s12.",
+    "academic_year": null,
+    "source_id": "s11",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-p051",
+    "program_id": "P-09d2680ae8edd5",
+    "criterion_type": "procedure_generale",
+    "value": "Présélection du dossier puis concours.",
+    "academic_year": null,
+    "source_id": "s14",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-p056",
+    "program_id": "P-035fba786ab5b5",
+    "criterion_type": "procedure_generale",
+    "value": "Concours pour candidats marocains ; dossier et entretien pour étrangers, selon ancienne page.",
+    "academic_year": null,
+    "source_id": "s18",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-p057",
+    "program_id": "P-9dc7b8d87cfe12",
+    "criterion_type": "procedure_generale",
+    "value": "Dossier et sélection selon page.",
+    "academic_year": null,
+    "source_id": "s18",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-ISIC",
+    "program_id": "P-d625b54553eace",
+    "criterion_type": "bac_et_selection",
+    "value": "Toutes séries ou équivalent selon fiche générale. Dossier, écrit et oral. Critères annuels à confirmer.",
+    "academic_year": null,
+    "source_id": "ISIC",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  },
+  {
+    "admission_id": "A-ISCAE",
+    "program_id": "P-d501794a2d518f",
+    "criterion_type": "bac_et_selection",
+    "value": "Bac scientifique ou économique selon fiche générale; dossier, écrit et oral. Conditions de campagne à confirmer.",
+    "academic_year": null,
+    "source_id": "ISCAE",
+    "status": "general_non_valide_campagne",
+    "usable_for_hard_filter": false
+  }
+]

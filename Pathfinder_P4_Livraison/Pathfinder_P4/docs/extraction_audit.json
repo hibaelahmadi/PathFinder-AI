@@ -1,0 +1,11 @@
+{
+  "official_register": "ACC2024",
+  "indexed_lines_expected": 13256,
+  "indexed_lines_collected": 13256,
+  "parsed_records": 2932,
+  "structurally_rejected_records": 0,
+  "exact_repeated_records_in_source": 5,
+  "conflicting_latest_program_groups": 13,
+  "field_semantics": "accreditation, not admission",
+  "full_human_double_check": false
+}
