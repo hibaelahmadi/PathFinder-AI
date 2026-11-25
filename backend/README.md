@@ -313,12 +313,13 @@ The response contains `recommendations` and `location_to_verify`, with a total
 candidate count for each. When mobility is refused, formations in the requested
 city appear in `recommendations`; formations without a usable location appear
 separately in `location_to_verify`. Each list returns up to `top_n` results.
-If the preferred city is unknown, all retained formations go into the second
-list. With mobility allowed or undecided, `recommendations` contains the
-engine's overall ranking and `location_to_verify` is empty. Nullable city and
-constraint reasons still identify unknown locations.
+With no preferred city, or mobility allowed or undecided, `recommendations`
+contains the engine's overall ranking and `location_to_verify` is empty.
+Nullable city and constraint reasons still identify unknown locations.
 
-Scores and explanations come from Person 5's engine at commit `45b3fe2`.
+Scores, explanations, and location grouping come from Person 5's
+`recommend_grouped()` at commit `0721f0e`, with integration documentation from
+`d7a5baa` (PR #10).
 Missing inputs are allowed; scores can be null and unknown admission, cost,
 or location information remains explicitly flagged. The unresolved comparison
 between Person 3's 12 and Person 5's 11 matching-city formations is not treated
@@ -326,8 +327,10 @@ as a validated agreement.
 
 The backend passes the saved questionnaire profile to P5's adapter unchanged.
 It does not infer structured interest/skill categories from free text. This
-version of the adapter uses `bac`, not the proposed `code_bac`; harmonizing bac
-codes and the subject/category vocabulary remains a team integration task.
+adapter uses `code_bac` for eligibility and preserves `bac` separately as
+`bac_text`. A missing or ambiguous bac code stays unknown; the backend does not
+infer a code from the text. Harmonizing the subject/category vocabulary remains
+a team integration task.
 
 The two JSON files in `Pathfinder_P4_Livraison/Pathfinder_P4/data` were retrieved
 unchanged from `main` commit `b9db7a74d8d2c467e1321459140677427c450eae`:
@@ -353,4 +356,15 @@ Run Person 5's catalogue demo from the repository root:
 
 ```powershell
 .\backend\.venv\Scripts\python.exe -m ai.recommendation.demo_catalogue
+```
+
+To try the authenticated API from `/docs`, register or log in, authorize with
+the returned bearer token, complete and confirm a questionnaire session, then
+call `GET /sessions/{session_id}/recommendations?top_n=5` with its numeric ID.
+The saved profile is used; a caller cannot submit another profile in this GET.
+
+Run P5's regression tests from the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m unittest discover -s ai/recommendation -p "test_*.py" -v
 ```

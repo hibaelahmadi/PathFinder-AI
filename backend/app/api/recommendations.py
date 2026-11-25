@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from ai.recommendation.adapters import adapt_p4_program, adapt_student_profile
-from ai.recommendation.engine import recommend
+from ai.recommendation.engine import recommend_grouped
 
 from app.api.sessions import find_owned_session
 from app.core.security import get_current_user
@@ -57,20 +57,16 @@ def get_session_recommendations(
     ]
     programs_by_id = {program["id"]: program for program in adapted}
     student = adapt_student_profile(session.profile)
-    # Rank all candidates before grouping so unknown locations cannot displace
-    # the best matching-city results when the student cannot relocate.
-    results = recommend(student, adapted, top_n=max(1, len(adapted)))
-    recommendations = []
-    location_to_verify = []
-    for result in results:
-        program = programs_by_id[result["program_id"]]
-        item = {**program, **result}
-        if student["can_relocate"] is False and (
-            not student["preferred_city"] or not program["city"]
-        ):
-            location_to_verify.append(item)
-        else:
-            recommendations.append(item)
+    # Request all retained candidates to preserve totals before API pagination.
+    grouped = recommend_grouped(student, adapted, top_n=max(1, len(adapted)))
+    recommendations = [
+        {**programs_by_id[result["program_id"]], **result}
+        for result in grouped["recommendations"]
+    ]
+    location_to_verify = [
+        {**programs_by_id[result["program_id"]], **result}
+        for result in grouped["location_to_verify"]
+    ]
 
     return {
         "session_id": session_id,
