@@ -91,3 +91,15 @@ for result in known_city[:5]:
         "| Ville :", program["city"],
         "| Score :", result["score"],
     )
+
+from ai.recommendation.engine import recommend_grouped
+
+grouped = recommend_grouped(
+    student,
+    adapted_programs,
+    top_n=len(adapted_programs),
+)
+
+print("\n--- Résultats groupés ---")
+print("Ville compatible :", len(grouped["recommendations"]))
+print("Localisation à vérifier :", len(grouped["location_to_verify"]))

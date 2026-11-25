@@ -1,7 +1,7 @@
 import unittest
 
 from adapters import adapt_student_profile, adapt_p4_program
-from engine import recommend
+from engine import recommend, recommend_grouped
 from scoring import calculate_score
 
 
@@ -87,6 +87,29 @@ class TestRegressions(unittest.TestCase):
 
         self.assertEqual(results, [])
 
+    def test_grouped_results_respect_location_and_budget(self):
+        student = {
+            "preferred_city": "Rabat",
+            "can_relocate": False,
+            "max_annual_budget": 0,
+        }
+        programs = [
+            {"name": "Rabat", "city": "Rabat", "annual_cost": 0},
+            {"name": "Autre ville", "city": "Marrakech", "annual_cost": 0},
+            {"name": "Campus inconnu", "city": None, "annual_cost": None},
+            {"name": "Hors budget", "city": None, "annual_cost": 1000},
+        ]
+
+        results = recommend_grouped(student, programs)
+
+        self.assertEqual(
+            [item["program"] for item in results["recommendations"]],
+            ["Rabat"],
+        )
+        self.assertEqual(
+            [item["program"] for item in results["location_to_verify"]],
+            ["Campus inconnu"],
+        )
 
 if __name__ == "__main__":
     unittest.main()
