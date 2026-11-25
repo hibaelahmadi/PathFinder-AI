@@ -1,0 +1,50 @@
+[
+  {
+    "issue_id": "Q01",
+    "severity": "limite",
+    "detail": "Registres non exhaustifs pour 2026–2027; écoles fermées/renommées possibles dans accréditations.",
+    "impact": "Pas de badge admission vérifiée."
+  },
+  {
+    "issue_id": "Q02",
+    "severity": "limite",
+    "detail": "Tarifs annuels non vérifiés : annual_cost=null partout.",
+    "impact": "Inconnu ne vaut pas gratuit; comparer sans conclure sur le budget."
+  },
+  {
+    "issue_id": "Q03",
+    "severity": "limite",
+    "detail": "Séries de bac non normalisées faute de sources de campagne.",
+    "impact": "accepted_bac_types=null; ne pas exclure automatiquement."
+  },
+  {
+    "issue_id": "Q04",
+    "severity": "limite",
+    "detail": "Intérêts, compétences et pistes métiers issus de règles éditoriales transparentes.",
+    "impact": "Validation P5 requise; pas de prérequis d’admission."
+  },
+  {
+    "issue_id": "Q05",
+    "severity": "limite",
+    "detail": "Université UIC / réseau EMSI du premier lot non résolus en campus.",
+    "impact": "Afficher portée réseau; ne pas utiliser ville inconnue pour filtre strict."
+  },
+  {
+    "issue_id": "Q06",
+    "severity": "limite",
+    "detail": "Ville des composantes UNI héritée du rattachement.",
+    "impact": "Ne pas l’utiliser comme localisation certaine du campus."
+  },
+  {
+    "issue_id": "Q07",
+    "severity": "limite",
+    "detail": "Registre d’accréditation intégral transcrit automatiquement, contrôles structurels et échantillon vérifiés; pas de double saisie humaine.",
+    "impact": "Relire la ligne officielle avant décision administrative."
+  },
+  {
+    "issue_id": "Q08",
+    "severity": "conflit",
+    "detail": "13 fiches avec mentions concurrentes de même année; exclues des suggestions.",
+    "impact": "Consulter l’historique avant publication."
+  }
+]

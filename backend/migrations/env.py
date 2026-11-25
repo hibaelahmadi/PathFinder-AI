@@ -12,8 +12,11 @@ from app.models.institution import Institution
 from app.models.program import Program
 from app.models.program_career import ProgramCareer
 from app.models.program_source import ProgramSource
+from app.models.questionnaire_answer import QuestionnaireAnswer
+from app.models.questionnaire_session import QuestionnaireSession
 from app.models.source import Source
 from app.models.user import User
+from app.models.student_profile import StudentProfile
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

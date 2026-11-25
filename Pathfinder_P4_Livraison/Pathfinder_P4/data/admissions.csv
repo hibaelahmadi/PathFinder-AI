@@ -1,0 +1,10 @@
+﻿admission_id,program_id,criterion_type,value,academic_year,source_id,status,usable_for_hard_filter
+A-p018,P-f3862052f5b28c,procedure_generale,"Présélection puis TAFEM, selon brochure générale.",,s04,general_non_valide_campagne,False
+A-p024,P-c0cffa02ec72ed,procedure_generale,Concours national post-bac ; règles annuelles à confirmer.,,s07,general_non_valide_campagne,False
+A-p036,P-6fce2dd7b4a6f0,procedure_generale,Concours selon modalités ministérielles.,,s10,general_non_valide_campagne,False
+A-p037,P-f9bab4bb8d054e,procedure_generale,Dossier et entretien selon s12.,,s11,general_non_valide_campagne,False
+A-p051,P-09d2680ae8edd5,procedure_generale,Présélection du dossier puis concours.,,s14,general_non_valide_campagne,False
+A-p056,P-035fba786ab5b5,procedure_generale,"Concours pour candidats marocains ; dossier et entretien pour étrangers, selon ancienne page.",,s18,general_non_valide_campagne,False
+A-p057,P-9dc7b8d87cfe12,procedure_generale,Dossier et sélection selon page.,,s18,general_non_valide_campagne,False
+A-ISIC,P-d625b54553eace,bac_et_selection,"Toutes séries ou équivalent selon fiche générale. Dossier, écrit et oral. Critères annuels à confirmer.",,ISIC,general_non_valide_campagne,False
+A-ISCAE,P-d501794a2d518f,bac_et_selection,"Bac scientifique ou économique selon fiche générale; dossier, écrit et oral. Conditions de campagne à confirmer.",,ISCAE,general_non_valide_campagne,False

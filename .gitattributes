@@ -1,0 +1,2 @@
+# Preserve the delivery's exact bytes, including its corpus/index checksums.
+Pathfinder_P4_Livraison/Pathfinder_P4/** -text
