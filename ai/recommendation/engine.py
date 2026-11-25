@@ -49,3 +49,40 @@ def recommend(student, programs, top_n=5):
     )
 
     return recommendations[:top_n]
+def recommend_grouped(student, programs, top_n=5):
+    """Sépare les résultats lorsque la mobilité est refusée."""
+    if isinstance(top_n, bool) or not isinstance(top_n, int):
+        raise TypeError("top_n doit être un entier.")
+
+    if top_n < 1:
+        raise ValueError("top_n doit être supérieur ou égal à 1.")
+
+    programs = list(programs)
+    preferred_city = student.get("preferred_city")
+
+    # Sans contrainte géographique stricte, garder le classement habituel.
+    if student.get("can_relocate") is not False or not preferred_city:
+        return {
+            "recommendations": recommend(student, programs, top_n),
+            "location_to_verify": [],
+        }
+
+    known_location = []
+    unknown_location = []
+
+    for program in programs:
+        if program.get("city"):
+            known_location.append(program)
+        else:
+            unknown_location.append(program)
+
+    # recommend() exclut toujours les villes incompatibles,
+    # les bacs incompatibles et les coûts dépassant le budget.
+    return {
+        "recommendations": recommend(
+            student, known_location, top_n
+        ),
+        "location_to_verify": recommend(
+            student, unknown_location, top_n
+        ),
+    }
