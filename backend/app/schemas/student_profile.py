@@ -10,7 +10,7 @@ ShortText = Annotated[
 ]
 Grade = Annotated[
     float,
-    Field(ge=0, le=20, allow_inf_nan=False),
+    Field(ge=0, le=20, allow_inf_nan=False, strict=True),
 ]
 
 

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from pathfinder_p4.catalog import load
 
 from ai.chatbot.questionnaire import (
     creer_profil,
@@ -11,6 +12,7 @@ from ai.chatbot.questionnaire import (
 )
 
 from app.core.security import get_current_user
+from app.core.config import Settings
 from app.db.session import get_db
 from app.models.questionnaire_answer import QuestionnaireAnswer
 from app.models.questionnaire_session import QuestionnaireSession
@@ -24,6 +26,7 @@ from app.schemas.questionnaire import (
 
 
 router = APIRouter(prefix="/sessions", tags=["Questionnaire sessions"])
+settings = Settings()
 
 
 def find_owned_session(
@@ -81,8 +84,16 @@ def create_session(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(get_current_user)],
 ):
+    categories = load("vocabulary")["categories"]
+    options = {
+        "inclure_budget_type": True,
+        "matieres": categories["required_subjects"],
+        "codes_interets": categories["interests"],
+        "codes_competences": categories["skills"],
+        "codes_metiers": categories["career_paths"],
+    }
     result = QuestionnaireResult.model_validate(
-        traiter_questionnaire(None, "start")
+        traiter_questionnaire(None, "start", **options)
     )
     if result.errors:
         raise HTTPException(status_code=422, detail=result.errors)
@@ -91,6 +102,8 @@ def create_session(
         user_id=user.id,
         status=result.etat.status,
         expected_question_code=result.etat.expected_question_code,
+        next_question=result.next_question.model_dump() if result.next_question else None,
+        questionnaire_options=options,
         profile=result.profile,
         profile_confirmed=result.profile_confirmed,
     )
@@ -139,6 +152,8 @@ def process_questionnaire_action(
                 state,
                 data.action,
                 data.reponse.model_dump() if data.reponse is not None else None,
+                **session.questionnaire_options,
+                enrichir_profil=settings.QUESTIONNAIRE_ENRICH_PROFILE,
             )
         )
         if result.errors:
@@ -163,6 +178,9 @@ def process_questionnaire_action(
 
         session.status = result.etat.status
         session.expected_question_code = result.etat.expected_question_code
+        session.next_question = (
+            result.next_question.model_dump() if result.next_question else None
+        )
         session.profile = result.profile
         session.profile_confirmed = result.profile_confirmed
         db.commit()
@@ -182,10 +200,15 @@ def get_questionnaire_state(
     try:
         session = find_owned_session(db, session_id, user.id, for_update=True)
         state, stored_answers = load_questionnaire_state(db, session)
-        question = prochaine_question({
-            code: answer.answer_value
-            for code, answer in stored_answers.items()
-        })
+        question = session.next_question
+        # Sessions created before the context migration have no saved question.
+        if not session.questionnaire_options and session.status == "in_progress":
+            question = prochaine_question({
+                code: answer.answer_value
+                for code, answer in stored_answers.items()
+            })
+        if session.status == "completed":
+            question = None
         state["expected_question_code"] = (
             question["question_code"] if question else None
         )

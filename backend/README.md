@@ -80,6 +80,10 @@ Press Ctrl+C in the terminal to stop the server.
   to Person 3's questionnaire module.
 - Owner-protected recommendations use a confirmed questionnaire profile,
   Person 5's engine, and Person 4's exploration catalogue.
+- P4 catalogue cards, sources, vocabulary, and authenticated evidence retrieval
+  are available through the same FastAPI application.
+- Browser access is restricted to the origins configured in `CORS_ORIGINS`.
+
 ## Run tests
 
 From the backend folder, install the development dependencies:
@@ -198,6 +202,8 @@ normalized to lowercase.
 
 Registration does not accept a role; new accounts are students.
 Responses never include password hashes.
+The database supports `student` and `admin` roles. Both use the same owner-only
+profile/session rules; registration cannot grant administrative privileges.
 
 For protected requests, send:
 Authorization: Bearer <access_token>
@@ -281,21 +287,51 @@ The session profile contains the module's original fields, including
 `competences_declarees` and boolean `confirme`. Confirmation validates the
 summary and does not guarantee all recommendation inputs are available.
 
-The backend also accepts Person 3's planned profile fields:
+New sessions use Person 3's questionnaire at commit `4233f57`. They collect:
 
 - `notes`: an object mapping subject identifiers to numeric grades from 0 to 20,
   or `null`. Subjects without a grade are omitted.
 - `budget_annuel_max`: a nonnegative number or `null`, representing annual tuition
   in MAD, excluding registration fees, housing, and transport.
 - `type_etablissement`: `"public"`, `"prive"`, or `null` for no preference or unknown.
+- `code_bac`: the recognized Sciences mathématiques A/B code, or `null` when
+  uncertain. The original `bac` text is preserved; ambiguous A/B adds a
+  `precision_bac` question.
 
 The questionnaire module validates these values; the backend preserves their
-JSON types in the existing JSONB column. Original textual answers remain saved
-separately. These storage changes do not add the new questions to the chatbot.
-Subject and category identifiers remain to be agreed with Person 4.
+JSON types in JSONB. Original textual answers remain saved separately.
+After the original questions, budget and type are asked, then optional grades
+using `note:<subject_code>`. Empty grade answers skip that subject; zero remains
+a real grade. Read the next question from `/sessions/{session_id}/state` or the
+last action result rather than hardcoding the order.
 
-The normalized `/profiles/me` record is maintained separately until its
-mapping to the questionnaire profile is agreed with Person 5.
+Each session saves its question options, ordered subject codes, allowed
+categories, and next question. This keeps settings stable across server restarts
+and preserves the exact question during resume. The codes come from P4's
+versioned draft-1 vocabulary; they are not validated admission criteria.
+Older sessions retain their original options and remain readable. Start a new
+session to use the full new questionnaire. The migration adding this context
+is `c4a812f6d930`; apply it with `alembic upgrade head` before running the API.
+
+The normalized `/profiles/me` record is a separate optional editable profile.
+Recommendations use the confirmed session snapshot through P5's adapter,
+so the backend does not copy it into that separate profile automatically.
+
+Gemini enrichment of interest/skill/career codes is optional. Install its
+dependencies from `backend` with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,gemini]"
+```
+
+P3's module reads `GEMINI_API_KEY` from the repository-root `.env` (not
+`backend/.env`). Keep that private file ignored. To enable enrichment, set
+`QUESTIONNAIRE_ENRICH_PROFILE=true` in `backend/.env` and restart the API.
+It is disabled by default. A valid confirmation can call Gemini up to three
+times; unavailable or uncertain extraction leaves the corresponding category
+null, while original answers remain saved. Read-only resume does not call the
+LLM or overwrite the saved enriched profile. Live Gemini calls require P3's
+configuration; backend integration was verified with mocked extraction.
 
 The connected flow was verified against `pathfinder_test_db`, including
 skipped answers, confirmation, reopening, dependency deletion, ownership,
@@ -325,16 +361,20 @@ or location information remains explicitly flagged. The unresolved comparison
 between Person 3's 12 and Person 5's 11 matching-city formations is not treated
 as a validated agreement.
 
-The backend passes the saved questionnaire profile to P5's adapter unchanged.
-It does not infer structured interest/skill categories from free text. This
+The backend validates profile types, finite grades/budget, and vocabulary codes
+before passing the saved questionnaire profile to P5's adapter. An invalid
+saved profile returns 409 and must be corrected. No structured interest/skill
+category is inferred by the backend from free text. This
 adapter uses `code_bac` for eligibility and preserves `bac` separately as
 `bac_text`. A missing or ambiguous bac code stays unknown; the backend does not
 infer a code from the text. Harmonizing the subject/category vocabulary remains
 a team integration task.
 
-The two JSON files in `Pathfinder_P4_Livraison/Pathfinder_P4/data` were retrieved
-unchanged from `main` commit `b9db7a74d8d2c467e1321459140677427c450eae`:
-`institutions.json` and `programs_exploration.json` (87 formations). This endpoint
+P4's delivery in `Pathfinder_P4_Livraison/Pathfinder_P4` was retrieved from
+`main` commit `b9db7a74d8d2c467e1321459140677427c450eae`, with its source code,
+data, retrieval index, provenance, and documentation preserved.
+Recommendations use `institutions.json` and `programs_exploration.json`
+(87 formations). This endpoint
 reads that snapshot directly; it does not import it into PostgreSQL. P4 string
 identifiers remain strings and must not be used as numeric catalogue API IDs.
 Source references, catalogue status, provisional matching status, and notes are
@@ -368,3 +408,92 @@ Run P5's regression tests from the repository root:
 ```powershell
 .\backend\.venv\Scripts\python.exe -m unittest discover -s ai/recommendation -p "test_*.py" -v
 ```
+
+## P4 catalogue and sourced retrieval
+
+P1 should use these routes for the delivered dataset. P4 IDs are strings, and
+the numeric PostgreSQL catalogue routes above remain a separate API.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | /catalogue/programs | Explore programs, with optional history |
+| GET | /catalogue/programs/{program_id} | Program card, institution, sources and warnings |
+| GET | /catalogue/institutions | Institutions |
+| GET | /catalogue/careers | Career records |
+| GET | /catalogue/sources | Source registry |
+| GET | /catalogue/pathways | P4's general pathway records |
+| GET | /catalogue/vocabulary/current | Draft subject, bac and matching codes |
+| POST | /catalogue/evidence | Authenticated sourced retrieval |
+
+Lists return `total` and `items`; `offset` defaults to 0 and `limit` to 20
+(maximum 100). Programs accept `city`, `sector`, `field`, `direct_post_bac`,
+and `include_archive` (false by default). These are P4's catalogue filters;
+the stricter location handling for recommendations is provided by P5.
+Missing program cards return 404; invalid inputs return 422.
+
+Evidence requests require a bearer token and accept:
+
+```json
+{
+  "query": "ENSA Marrakech cycle preparatoire",
+  "filters": {"institution_id": "PUB056"},
+  "top_k": 3
+}
+```
+
+Allowed filters: `institution_id`, `program_id`, `city`, `sector`, `field`,
+`academic_year`, `direct_post_bac`, `exploration_visible`, `source_id`.
+Values may be single values or lists; boolean filters require JSON booleans.
+`top_k` is an integer from 1 to 50. Use `exploration_visible=true` when
+retrieving evidence for suggestions; historical evidence retains its year.
+
+Responses contain `status` (`ok` or `no_evidence`), `evidence`, and
+`admission_verified=false`. Each passage preserves P4's text, content type,
+source ID, official URL, document title/publisher, location within the source,
+documentary year, check date, verification status, and retrieval score.
+No retrieved evidence means no supporting passage was found. Retrieval scores
+are distinct from student compatibility scores and admission probabilities.
+An unavailable or stale index returns 503. The supplied TF-IDF/LSA index is
+local and requires no API key. Rebuilding or ingesting data remains P4's workflow.
+
+The delivery's checksums depend on exact bytes. `.gitattributes` disables
+line-ending conversion for this delivery so its index remains usable after clone.
+The backend install includes the P4 package and its NumPy/SciPy runtime needs.
+P4's broader offline ingestion/index-building commands have their own optional
+dependencies and instructions in the delivery README.
+
+## Frontend handoff and final verification
+
+The API runs at `http://127.0.0.1:8000`. Set `CORS_ORIGINS` in `backend/.env`
+to a JSON array of P1's browser origins, including protocol and port. The
+defaults are `http://localhost:3000` and `http://localhost:5173`. Send access
+tokens using the Authorization header; this configuration does not use cookies.
+
+Use `/docs` or `/openapi.json` for request/response formats. A frontend flow is:
+
+1. Register/login, then authorize with the returned bearer token.
+2. Create a session and load its state.
+3. Submit the displayed question's code and original text with action `answer`.
+4. At the summary, explicitly `confirm`; retrieve the session recommendations.
+5. Read each P4 card using its string program ID and show its source warnings.
+6. For corrections, `reopen`, submit `correct`, answer dependent questions,
+   and confirm again. Recommendations return 409 during correction.
+
+Local checks exercised this full flow against the separate test database,
+including optional extraction with mocked responses, saved-question resume,
+validation and persistence rollback, legacy sessions, and actual sourced
+retrieval. Temporary test records were rolled back. No live LLM calls were made.
+The schema was checked with Alembic in both local databases.
+
+Run the existing module suites from the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s ai/chatbot -p "test*.py" -q
+.\backend\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s ai/recommendation -p "test_*.py" -q
+.\backend\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s Pathfinder_P4_Livraison/Pathfinder_P4/tests -p "test*.py" -q
+```
+
+UTF-8 mode avoids a Windows encoding mismatch in P4's temporary HTML test fixture.
+Backend pytest and PostgreSQL test instructions are above. P1's actual UI flow,
+live Gemini behavior, and recommendation relevance still need the team review
+before release; these are separate from the verified local backend handoff.

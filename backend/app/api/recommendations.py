@@ -4,6 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
+from pydantic import ValidationError
+from pathfinder_p4.catalog import load
 
 from ai.recommendation.adapters import adapt_p4_program, adapt_student_profile
 from ai.recommendation.engine import recommend_grouped
@@ -12,7 +14,7 @@ from app.api.sessions import find_owned_session
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.recommendation import SessionRecommendations
+from app.schemas.recommendation import RecommendationProfile, SessionRecommendations
 
 
 router = APIRouter(prefix="/sessions", tags=["Recommendations"])
@@ -56,7 +58,15 @@ def get_session_recommendations(
         for program in programs
     ]
     programs_by_id = {program["id"]: program for program in adapted}
-    student = adapt_student_profile(session.profile)
+    try:
+        profile = RecommendationProfile.model_validate(
+            session.profile, context={"categories": load("vocabulary")["categories"]}
+        )
+    except ValidationError as error:
+        raise HTTPException(
+            status_code=409, detail="Saved profile is invalid; reopen and correct it"
+        ) from error
+    student = adapt_student_profile(profile.model_dump())
     # Request all retained candidates to preserve totals before API pagination.
     grouped = recommend_grouped(student, adapted, top_n=max(1, len(adapted)))
     recommendations = [

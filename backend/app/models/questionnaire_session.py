@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, false, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, false, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,6 +28,12 @@ class QuestionnaireSession(Base):
         server_default="in_progress",
     )
     expected_question_code: Mapped[str | None] = mapped_column(String(100))
+    next_question: Mapped[dict[str, str] | None] = mapped_column(
+        JSONB(none_as_null=True)
+    )
+    questionnaire_options: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
     profile: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB(none_as_null=True)
     )
