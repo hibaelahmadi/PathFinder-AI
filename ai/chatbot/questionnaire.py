@@ -1,5 +1,12 @@
 from copy import deepcopy
 
+if __package__:
+    from .serie_bac import reconnaitre_sciences_mathematiques
+    from .validation_profil import valider_budget_annuel, valider_type_etablissement, valider_note
+else:
+    from serie_bac import reconnaitre_sciences_mathematiques
+    from validation_profil import valider_budget_annuel, valider_type_etablissement, valider_note
+
 
 def choisir_question_interets(interets):
     """Choisit une question de précision selon les intérêts."""
@@ -39,6 +46,7 @@ QUESTIONS = {
         "Quel type d'établissement préfères-tu : public, privé ou sans préférence ? "
         "Cette réponse est facultative : appuie sur Entrée pour passer. "
     ),
+    "precision_bac": "Ta série est-elle Sciences mathématiques A ou B ? (A / B / je ne sais pas ; Entrée pour passer) ",
     "bac": "Quelle est ta série de bac ? ",
     "ville_souhaitee": "Dans quelle ville souhaites-tu étudier ? ",
     "interets": "Quelles matières ou activités aimes-tu ? ",
@@ -69,6 +77,7 @@ def creer_profil():
         "budget_annuel_max": None,
         "type_etablissement": None,
         "bac": None,
+        "code_bac": None,
         "ville_souhaitee": None,
         "interets": None,
         "precision_interets": None,
@@ -78,10 +87,19 @@ def creer_profil():
         "competences_declarees": None,
         "confirme": False,
     }
+def calculer_code_bac(reponses):
+    reconnaissance = reconnaitre_sciences_mathematiques(reponses.get("bac") or "")
+    lettre = reconnaissance["code"]
+    if reconnaissance["clarification_needed"]:
+        lettre = reponses.get("precision_bac")
+    return f"sciences_mathematiques_{lettre.lower()}" if lettre in ("A", "B") else None
+
+
 def prochaine_question(reponses):
     """Renvoie la prochaine question, ou None si le résumé est prêt."""
     ordre = [
         "bac",
+        "precision_bac",
         "ville_souhaitee",
         "interets",
         "precision_interets",
@@ -92,6 +110,9 @@ def prochaine_question(reponses):
     ]
 
     for code in ordre:
+        if code == "precision_bac" and not reconnaitre_sciences_mathematiques(
+                reponses.get("bac") or "")["clarification_needed"]:
+            continue
         # On demande les autres villes seulement si la mobilité est acceptée.
         if code == "autres_villes":
             if reponses.get("mobilite") != "oui":
@@ -119,6 +140,16 @@ def _valider_reponse(question_code, answer_text):
     if not isinstance(answer_text, str):
         return None, ["La réponse doit être une chaîne de caractères."]
 
+    if question_code == "precision_bac":
+        valeur = answer_text.strip().casefold()
+        if valeur in ("", "je ne sais pas"):
+            return None, []
+        if valeur in ("a", "b"):
+            return valeur.upper(), []
+        code = reconnaitre_sciences_mathematiques(answer_text)["code"]
+        if code:
+            return code, []
+        return None, ["Écris A, B, je ne sais pas ou laisse la réponse vide."]
     valeur = answer_text.strip()
     if question_code == "mobilite":
         valeur = valeur.lower()
@@ -176,6 +207,7 @@ def corriger_reponse(reponses, question_code, answer_text):
         actualisees[question_code] = valeur
         if valeur != reponses[question_code]:
             dependances = {
+                "bac": "precision_bac",
                 "interets": "precision_interets",
                 "mobilite": "autres_villes",
             }
@@ -195,20 +227,102 @@ def corriger_reponse(reponses, question_code, answer_text):
 
 
 
-def traiter_questionnaire(etat, action, reponse=None):
+def _enrichir_profil(profil, answers, codes_interets, codes_competences, codes_metiers):
+    """Enrichit un instantané ; chaque extraction peut échouer indépendamment."""
+    from importlib import import_module
+
+    originaux = {entree["question_code"]: entree["answer_text"] for entree in answers}
+    interets = originaux.get("interets", "")
+    precision = originaux.get("precision_interets", "")
+    if precision.strip():
+        interets = f"Réponse initiale : {interets}\nPrécision : {precision}"
+    extractions = [
+        ("categories_interets", "interets_gemini", "extraire_interets", interets, codes_interets, "codes"),
+        ("categories_competences", "competences_gemini", "extraire_competences",
+         originaux.get("competences_declarees", ""), codes_competences, "codes"),
+        ("code_metier", "objectif_gemini", "extraire_objectif",
+         originaux.get("objectif", ""), codes_metiers, "code_metier"),
+    ]
+    for champ, module, fonction, texte, codes, cle in extractions:
+        profil[champ] = None
+        if not texte.strip() or not codes:
+            continue
+        try:
+            module = import_module(f".{module}", __package__) if __package__ else import_module(module)
+            retour = getattr(module, fonction)(texte, deepcopy(codes))
+            if not retour["errors"] and not retour["clarification_needed"]:
+                profil[champ] = retour[cle]
+        except Exception:
+            # Les détails d'erreur peuvent contenir des secrets ; ne pas les exposer.
+            pass
+
+
+def traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None,
+                         enrichir_profil=False, codes_interets=None,
+                         codes_competences=None, codes_metiers=None):
     """Adapte synchroniquement le questionnaire à un état échangeable en JSON.
 
     answers est un dictionnaire indexé par question_code.
     reponse contient question_code, answer_text et les métadonnées facultatives.
     Les métadonnées des questions et valeurs structurées sont recalculées.
     Aucun objet reçu n'est modifié et aucune persistance n'est effectuée.
+    inclure_budget_type=True ajoute budget et type après les compétences.
+    matieres fournit les codes ordonnés des questions finales note:<code>.
+    La même liste doit être fournie à chaque appel de la session.
+    enrichir_profil active les extractions seulement lors d'un confirm valide.
+    Le mode est fourni par l'appelant à chaque appel, sans modifier le contrat
+    d'état. Une ancienne session completed reste confirmée jusqu'à reopen.
     """
     initial = deepcopy(etat)
     valeurs = {}
     entrees = []
     errors = []
     status = "in_progress"
-    codes = set(QUESTIONS) | {"precision_interets"}
+    notes_questions = {}
+    if matieres is not None:
+        if (not isinstance(matieres, list)
+                or any(not isinstance(m, str) or not m.strip() for m in matieres)
+                or len(matieres) != len(set(matieres))):
+            errors.append("matieres doit être une liste ordonnée de codes textuels uniques non vides.")
+        else:
+            notes_questions = {f"note:{matiere}": matiere for matiere in matieres}
+    codes = set(QUESTIONS) | {"precision_interets"} | set(notes_questions)
+    validations = {
+        "budget_annuel_max": valider_budget_annuel,
+        "type_etablissement": valider_type_etablissement,
+    }
+
+    def valider(code, texte):
+        if code in notes_questions:
+            retour = valider_note(texte)
+            return retour["value"], retour["errors"]
+        if code in validations:
+            retour = validations[code](texte)
+            return retour["value"], retour["errors"]
+        return _valider_reponse(code, texte)
+
+    def question_suivante():
+        lecture = valeurs
+        if status == "completed" and "precision_bac" not in valeurs:
+            lecture = {**valeurs, "precision_bac": None}
+        question = prochaine_question(lecture)
+        if question is not None:
+            return question
+        ancien_budget = status == "completed" and not any(c in valeurs for c in validations)
+        if inclure_budget_type and not ancien_budget:
+            for code in validations:
+                if code not in valeurs:
+                    return {"question_code": code, "question_text": QUESTIONS[code]}
+        anciennes_notes = status == "completed" and not any(c in valeurs for c in notes_questions)
+        if not anciennes_notes:
+            for code, matiere in notes_questions.items():
+                if code not in valeurs:
+                    return {"question_code": code, "question_text": texte_note(matiere)}
+        return None
+
+    def texte_note(matiere):
+        return (f"Note pour {matiere} sur 20 ? Entrée permet de passer "
+                "ou d'effacer la note en correction ; 0 est une vraie note. ")
 
     if etat is None:
         if action != "start":
@@ -234,7 +348,7 @@ def traiter_questionnaire(etat, action, reponse=None):
                 if cle != code:
                     errors.append("La clé de answers doit correspondre à question_code.")
                     continue
-                valeur, erreurs = _valider_reponse(code, entree.get("answer_text"))
+                valeur, erreurs = valider(code, entree.get("answer_text"))
                 errors.extend(erreurs)
                 if not erreurs:
                     valeurs[code] = valeur
@@ -242,10 +356,12 @@ def traiter_questionnaire(etat, action, reponse=None):
                                     "answer_text": entree["answer_text"]})
             if "autres_villes" in valeurs and valeurs.get("mobilite") != "oui":
                 errors.append("Les autres villes nécessitent une mobilité acceptée.")
-        if status == "completed" and prochaine_question(valeurs) is not None:
+        if status == "completed" and question_suivante() is not None:
             errors.append("Un entretien completed doit avoir traité toutes les questions.")
 
     def texte_question(code):
+        if code in notes_questions:
+            return texte_note(notes_questions[code])
         if code == "precision_interets":
             return choisir_question_interets(valeurs.get("interets"))
         return QUESTIONS[code]
@@ -256,11 +372,21 @@ def traiter_questionnaire(etat, action, reponse=None):
                 "answer_text": entree["answer_text"], "answer_value": valeurs[code]}
 
     def resultat(erreurs, sauvegardes=None, suppressions=None):
-        suivante = prochaine_question(valeurs)
+        suivante = question_suivante()
         confirme = status == "completed" and suivante is None and not errors
         profil = creer_profil()
-        profil.update(valeurs)
+        profil.update({code: valeur for code, valeur in valeurs.items() if code not in notes_questions})
+        profil["notes"] = {
+            matiere: valeurs[code] for code, matiere in notes_questions.items()
+            if code in valeurs and valeurs[code] is not None
+        } or None
+        for entree in entrees:
+            if entree["question_code"] == "bac" and valeurs.get("bac") is not None:
+                profil["bac"] = entree["answer_text"]
+        profil["code_bac"] = calculer_code_bac(valeurs)
         profil["confirme"] = confirme
+        if enrichir_profil and action == "confirm" and confirme and not erreurs:
+            _enrichir_profil(profil, entrees, codes_interets, codes_competences, codes_metiers)
         nouvel_etat = initial if erreurs else {
             "status": status,
             "expected_question_code": suivante["question_code"] if suivante else None,
@@ -292,7 +418,7 @@ def traiter_questionnaire(etat, action, reponse=None):
     if status == "completed":
         return resultat(["Rouvre l'entretien avant de répondre ou de le corriger."])
     if action == "confirm":
-        if prochaine_question(valeurs) is not None:
+        if question_suivante() is not None:
             return resultat(["Toutes les questions applicables doivent être traitées."])
         status = "completed"
         return resultat([])
@@ -301,8 +427,22 @@ def traiter_questionnaire(etat, action, reponse=None):
     code = reponse.get("question_code")
     if not isinstance(code, str):
         return resultat(["question_code doit être une chaîne de caractères."])
-    fonction = traiter_reponse if action == "answer" else corriger_reponse
-    traitement = fonction(valeurs, code, reponse.get("answer_text"))
+    if code in validations or code in notes_questions:
+        erreurs = []
+        if code in validations and not inclure_budget_type:
+            erreurs.append("Le mode budget et type d'établissement n'est pas activé.")
+        elif action == "answer":
+            question = question_suivante()
+            if question is None or question["question_code"] != code:
+                erreurs.append("Le code ne correspond pas à la question attendue.")
+        elif code not in valeurs:
+            erreurs.append("Cette question n'a pas encore été traitée.")
+        valeur, erreurs_validation = valider(code, reponse.get("answer_text"))
+        erreurs.extend(erreurs_validation)
+        traitement = {"reponses": {**valeurs, code: valeur}, "errors": erreurs}
+    else:
+        fonction = traiter_reponse if action == "answer" else corriger_reponse
+        traitement = fonction(valeurs, code, reponse.get("answer_text"))
     if traitement["errors"]:
         return resultat(traitement["errors"])
     valeurs = traitement["reponses"]

@@ -1,10 +1,253 @@
 from copy import deepcopy
+import json
 import unittest
+from unittest.mock import patch
 
 from ai.chatbot.questionnaire import traiter_questionnaire
 
 
 class ContratQuestionnaireTests(unittest.TestCase):
+    def test_enrichissement_confirmation_et_reconfirmation(self):
+        etat = self.remplir()["etat"]
+        # Une compétence explicite est nécessaire pour cette extraction.
+        etat = traiter_questionnaire(etat, "correct", {
+            "question_code": "competences_declarees", "answer_text": "  Je sais coder.  "})["etat"]
+        options = dict(enrichir_profil=True, codes_interets=["interet_a", "interet_b"],
+                       codes_competences=["competence_a"], codes_metiers=["metier_a"])
+        avant = deepcopy((etat, options))
+
+        def modele(code):
+            return json.dumps({"codes": [code], "clarification_needed": False,
+                               "clarification_question": None})
+
+        with patch("ai.chatbot.interets_gemini._generer", return_value=modele("interet_a")) as interets, \
+                patch("ai.chatbot.competences_gemini._generer_competences", return_value=modele("competence_a")), \
+                patch("ai.chatbot.objectif_gemini._generer_objectif", return_value=modele("metier_a")):
+            confirme = traiter_questionnaire(etat, "confirm", **options)
+            self.assertFalse(confirme["errors"])
+            self.assertTrue(confirme["profile_confirmed"])
+            self.assertEqual(confirme["profile"]["categories_interets"], ["interet_a"])
+            self.assertEqual(confirme["profile"]["categories_competences"], ["competence_a"])
+            self.assertEqual(confirme["profile"]["code_metier"], "metier_a")
+            self.assertIn("programmation", interets.call_args.args[0])
+            self.assertEqual(confirme["etat"]["answers"], etat["answers"])
+            self.assertEqual((etat, options), avant)
+            interets.reset_mock()
+            interdit = traiter_questionnaire(confirme["etat"], "confirm", **options)
+            self.assertTrue(interdit["errors"])
+            interets.assert_not_called()
+        rouvert = traiter_questionnaire(confirme["etat"], "reopen", **options)
+        corrige = traiter_questionnaire(rouvert["etat"], "correct", {
+            "question_code": "interets", "answer_text": "  Biologie  "}, **options)
+        precision = traiter_questionnaire(corrige["etat"], "answer", {
+            "question_code": "precision_interets", "answer_text": "  Observer les cellules  "}, **options)
+        with patch("ai.chatbot.interets_gemini._generer", return_value=modele("interet_b")) as interets, \
+                patch("ai.chatbot.competences_gemini._generer_competences", return_value=modele("competence_a")), \
+                patch("ai.chatbot.objectif_gemini._generer_objectif", return_value=modele("metier_a")):
+            nouveau = traiter_questionnaire(precision["etat"], "confirm", **options)
+            self.assertEqual(nouveau["profile"]["categories_interets"], ["interet_b"])
+            texte = interets.call_args.args[0]
+            self.assertIn("  Biologie  ", texte)
+            self.assertIn("  Observer les cellules  ", texte)
+            self.assertNotIn("programmation", texte)
+
+    def test_enrichissement_echecs_independants(self):
+        etat = self.remplir()["etat"]
+        etat = traiter_questionnaire(etat, "correct", {
+            "question_code": "competences_declarees", "answer_text": "Je sais coder"})["etat"]
+        with patch("ai.chatbot.interets_gemini._generer", side_effect=RuntimeError("erreur simulée")), \
+                patch("ai.chatbot.competences_gemini._generer_competences", return_value=json.dumps({
+                    "codes": [], "clarification_needed": True, "clarification_question": "Préciser ?"})), \
+                patch("ai.chatbot.objectif_gemini._generer_objectif", return_value=json.dumps({
+                    "codes": ["metier_a"], "clarification_needed": False, "clarification_question": None})):
+            retour = traiter_questionnaire(etat, "confirm", enrichir_profil=True,
+                codes_interets=["interet_a"], codes_competences=["competence_a"], codes_metiers=["metier_a"])
+        self.assertFalse(retour["errors"])
+        self.assertTrue(retour["profile_confirmed"])
+        self.assertIsNone(retour["profile"]["categories_interets"])
+        self.assertIsNone(retour["profile"]["categories_competences"])
+        self.assertEqual(retour["profile"]["code_metier"], "metier_a")
+
+    def test_enrichissement_desactive_ou_confirmation_invalide(self):
+        with patch("ai.chatbot.questionnaire._enrichir_profil") as extraction:
+            retour = traiter_questionnaire(self.remplir()["etat"], "confirm")
+            self.assertNotIn("categories_interets", retour["profile"])
+            incomplet = traiter_questionnaire(None, "start", enrichir_profil=True)
+            erreur = traiter_questionnaire(incomplet["etat"], "confirm", enrichir_profil=True)
+            self.assertTrue(erreur["errors"])
+            extraction.assert_not_called()
+
+    def test_notes_cycle_complet_et_relecture(self):
+        matieres = ["matiere_fictive_b", "matiere_fictive_a"]
+
+        def appel(etat, action, code=None, texte=None):
+            reponse = None if code is None else {
+                "question_code": code, "answer_text": texte,
+                "answer_value": 99, "question_text": "FAUX",
+            }
+            avant = deepcopy((etat, reponse, matieres))
+            retour = traiter_questionnaire(etat, action, reponse,
+                                          inclure_budget_type=True, matieres=matieres)
+            self.assertEqual((etat, reponse, matieres), avant)
+            return retour
+
+        retour = appel(None, "start")
+        attendus = ["bac", "ville_souhaitee", "interets", "precision_interets",
+                    "mobilite", "objectif", "competences_declarees",
+                    "budget_annuel_max", "type_etablissement",
+                    "note:matiere_fictive_b", "note:matiere_fictive_a"]
+        textes = ["Sciences", "Rabat", "informatique", "jeux", "non", "ingénieur",
+                  "Python", "0", "privé", " 0 ", ""]
+        for code, texte in zip(attendus, textes):
+            self.assertEqual(retour["next_question"]["question_code"], code)
+            retour = appel(retour["etat"], "answer", code, texte)
+            self.assertFalse(retour["errors"])
+        self.assertEqual(retour["profile"]["notes"], {"matiere_fictive_b": 0.0})
+        self.assertNotIn("note:matiere_fictive_b", retour["profile"])
+        self.assertEqual(retour["etat"]["answers"]["note:matiere_fictive_b"]["answer_text"], " 0 ")
+        self.assertEqual(retour["etat"]["answers"]["note:matiere_fictive_b"]["answer_value"], 0.0)
+        self.assertIsNone(retour["etat"]["answers"]["note:matiere_fictive_a"]["answer_value"])
+        self.assertFalse(retour["profile_confirmed"])
+        retour = appel(retour["etat"], "correct", "note:matiere_fictive_a", " 15,5 ")
+        self.assertEqual(retour["answers_to_save"][0]["answer_value"], 15.5)
+        self.assertEqual(retour["answers_to_save"][0]["answer_text"], " 15,5 ")
+        retour = appel(retour["etat"], "correct", "note:matiere_fictive_a", " ")
+        self.assertEqual(retour["profile"]["notes"], {"matiere_fictive_b": 0.0})
+        self.assertIsNone(retour["next_question"])
+        confirme = appel(retour["etat"], "confirm")
+        self.assertFalse(confirme["errors"])
+        self.assertTrue(confirme["profile_confirmed"])
+        self.assertEqual(confirme["profile"]["notes"], {"matiere_fictive_b": 0.0})
+        relu = appel(confirme["etat"], "confirm")
+        self.assertTrue(relu["profile_confirmed"])
+        self.assertEqual(relu["profile"], confirme["profile"])
+        rouvert = appel(confirme["etat"], "reopen")
+        efface = appel(rouvert["etat"], "correct", "note:matiere_fictive_b", "")
+        self.assertIsNone(efface["profile"]["notes"])
+        self.assertIsNone(efface["next_question"])
+        self.assertTrue(appel(efface["etat"], "confirm")["profile_confirmed"])
+
+    def test_notes_erreurs_preservent_etat(self):
+        etat = self.remplir()["etat"]
+        for action, code, texte in [("answer", "note:fictive_b", "12"),
+                                     ("correct", "note:fictive_a", "12"),
+                                     ("answer", "note:inconnue", "12"),
+                                     ("answer", "note:fictive_a", "21"),
+                                     ("answer", "note:fictive_a", "NaN"),
+                                     ("answer", "note:fictive_a", 0)]:
+            avant = deepcopy(etat)
+            retour = traiter_questionnaire(etat, action,
+                {"question_code": code, "answer_text": texte}, matieres=["fictive_a", "fictive_b"])
+            self.assertTrue(retour["errors"])
+            self.assertEqual(etat, avant)
+            self.assertEqual(retour["etat"], avant)
+            self.assertEqual(retour["answers_to_save"], [])
+            self.assertEqual(retour["answer_codes_to_delete"], [])
+        self.assertTrue(traiter_questionnaire(etat, "confirm", matieres=["fictive_a"])["errors"])
+        for matieres in ("fictive", ["a", "a"], [1], [""]):
+            self.assertTrue(traiter_questionnaire(etat, "confirm", matieres=matieres)["errors"])
+
+    def test_notes_facultatives_sans_budget_et_ancienne_session(self):
+        etat = self.remplir()["etat"]
+        self.assertIsNone(traiter_questionnaire(etat, "confirm")["profile"]["notes"])
+        retour = traiter_questionnaire(etat, "answer",
+            {"question_code": "note:fictive", "answer_text": ""}, matieres=["fictive"])
+        self.assertFalse(retour["errors"])
+        self.assertIsNone(retour["profile"]["notes"])
+        confirme = traiter_questionnaire(retour["etat"], "confirm", matieres=["fictive"])
+        self.assertTrue(confirme["profile_confirmed"])
+        ancien = traiter_questionnaire(etat, "confirm")
+        relu = traiter_questionnaire(ancien["etat"], "confirm", matieres=["fictive"])
+        self.assertTrue(relu["profile_confirmed"])
+        rouvert = traiter_questionnaire(ancien["etat"], "reopen", matieres=["fictive"])
+        self.assertEqual(rouvert["next_question"]["question_code"], "note:fictive")
+
+    def appel_budget_type(self, etat, action, code=None, texte=None):
+        reponse = None if code is None else {
+            "question_code": code, "answer_text": texte,
+            "answer_value": "valeur client ignorée", "question_text": "FAUX",
+        }
+        initial, initial_reponse = deepcopy(etat), deepcopy(reponse)
+        retour = traiter_questionnaire(
+            etat, action, reponse, inclure_budget_type=True,
+        )
+        self.assertEqual(etat, initial)
+        self.assertEqual(reponse, initial_reponse)
+        return retour
+
+    def test_mode_budget_type_cycle_correction_confirmation(self):
+        retour = traiter_questionnaire(None, "start", inclure_budget_type=True)
+        for texte in ["Sciences", "Rabat", "informatique", "jeux", "non", "ingénierie", "Python"]:
+            retour = self.appel_budget_type(retour["etat"], "answer",
+                                           retour["next_question"]["question_code"], texte)
+            self.assertFalse(retour["errors"])
+        self.assertEqual(retour["next_question"]["question_code"], "budget_annuel_max")
+        refuse = self.appel_budget_type(retour["etat"], "confirm")
+        self.assertTrue(refuse["errors"])
+        self.assertEqual(refuse["etat"], retour["etat"])
+        retour = self.appel_budget_type(retour["etat"], "answer", "budget_annuel_max", " 0 ")
+        self.assertEqual(retour["profile"]["budget_annuel_max"], 0)
+        self.assertIsInstance(retour["profile"]["budget_annuel_max"], (int, float))
+        self.assertEqual(retour["answers_to_save"][0]["answer_text"], " 0 ")
+        self.assertEqual(retour["answers_to_save"][0]["answer_value"], 0)
+        self.assertEqual(retour["next_question"]["question_code"], "type_etablissement")
+        retour = self.appel_budget_type(retour["etat"], "answer", "type_etablissement", " PRIVÉ ")
+        self.assertEqual(retour["profile"]["type_etablissement"], "prive")
+        self.assertEqual(retour["etat"]["answers"]["type_etablissement"]["answer_text"], " PRIVÉ ")
+        self.assertEqual(retour["answers_to_save"][0]["answer_value"], "prive")
+        self.assertIsNone(retour["next_question"])
+        self.assertFalse(retour["profile_confirmed"])
+        for code, texte, valeur in [("budget_annuel_max", "12,5", 12.5),
+                                     ("type_etablissement", "public", "public"),
+                                     ("budget_annuel_max", "", None),
+                                     ("type_etablissement", "  ", None),
+                                     ("budget_annuel_max", "0", 0),
+                                     ("type_etablissement", "privé", "prive")]:
+            retour = self.appel_budget_type(retour["etat"], "correct", code, texte)
+            self.assertFalse(retour["errors"])
+            self.assertEqual(retour["profile"][code], valeur)
+            self.assertEqual(retour["answers_to_save"][0]["answer_value"], valeur)
+        retour = self.appel_budget_type(retour["etat"], "confirm")
+        self.assertFalse(retour["errors"])
+        self.assertTrue(retour["profile_confirmed"])
+        self.assertEqual(retour["etat"]["status"], "completed")
+
+    def test_mode_budget_type_erreurs_et_champs_vides(self):
+        etat = self.remplir()["etat"]
+        for action, code, texte in [("answer", "type_etablissement", "public"),
+                                     ("correct", "budget_annuel_max", "0"),
+                                     ("answer", "budget_annuel_max", "-1"),
+                                     ("answer", "budget_annuel_max", "NaN"),
+                                     ("answer", "budget_annuel_max", 0)]:
+            erreur = self.appel_budget_type(etat, action, code, texte)
+            self.assertTrue(erreur["errors"])
+            self.assertEqual(erreur["etat"], etat)
+            self.assertEqual(erreur["answers_to_save"], [])
+            self.assertEqual(erreur["answer_codes_to_delete"], [])
+        retour = self.appel_budget_type(etat, "answer", "budget_annuel_max", "")
+        self.assertIsNone(retour["profile"]["budget_annuel_max"])
+        erreur = self.appel_budget_type(retour["etat"], "answer", "type_etablissement", "autre")
+        self.assertTrue(erreur["errors"])
+        self.assertEqual(erreur["etat"], retour["etat"])
+        retour = self.appel_budget_type(retour["etat"], "answer", "type_etablissement", "")
+        self.assertIsNone(retour["profile"]["type_etablissement"])
+        erreur = self.appel_budget_type(retour["etat"], "correct", "budget_annuel_max", "inf")
+        self.assertTrue(erreur["errors"])
+        self.assertEqual(erreur["etat"], retour["etat"])
+
+    def test_ancienne_session_confirmee_avec_et_sans_mode(self):
+        ancien = traiter_questionnaire(self.remplir()["etat"], "confirm")
+        for mode in (False, True):
+            retour = traiter_questionnaire(ancien["etat"], "confirm", inclure_budget_type=mode)
+            self.assertTrue(retour["profile_confirmed"])
+            self.assertEqual(retour["profile"], ancien["profile"])
+            self.assertIsNone(retour["next_question"])
+            self.assertEqual(retour["etat"], ancien["etat"])
+        rouvert = self.appel_budget_type(ancien["etat"], "reopen")
+        self.assertFalse(rouvert["errors"])
+        self.assertFalse(rouvert["profile_confirmed"])
+        self.assertEqual(rouvert["next_question"]["question_code"], "budget_annuel_max")
+
     def demarrer(self):
         retour = traiter_questionnaire(None, "start")
         self.assertEqual(retour["errors"], [])
@@ -51,7 +294,7 @@ class ContratQuestionnaireTests(unittest.TestCase):
                 "bac": {
                     "question_code": "bac",
                     "question_text": "Quelle est ta série de bac ?",
-                    "answer_text": "Sciences mathématiques",
+                    "answer_text": "Sciences mathématiques A",
                     "answer_value": None,
                 }
             },
@@ -68,7 +311,7 @@ class ContratQuestionnaireTests(unittest.TestCase):
         self.assertEqual(etat, initial)
         self.assertEqual(reponse, originale)
         self.assertIsInstance(retour["etat"]["answers"], dict)
-        self.assertEqual(retour["etat"]["answers"]["bac"]["answer_value"], "Sciences mathématiques")
+        self.assertEqual(retour["etat"]["answers"]["bac"]["answer_value"], "Sciences mathématiques A")
         self.assertEqual(retour["etat"]["answers"]["ville_souhaitee"]["answer_text"], " Rabat ")
         self.assertEqual(retour["profile"]["ville_souhaitee"], "Rabat")
         self.assertEqual(retour["next_question"]["question_code"], "interets")
@@ -115,7 +358,7 @@ class ContratQuestionnaireTests(unittest.TestCase):
         retour["etat"]["answers"]["bac"]["answer_value"] = {"faux": [1]}
         retour["etat"]["answers"]["bac"]["question_text"] = "FAUX"
         suite = self.envoyer(retour["etat"], "answer", "ville_souhaitee", "Rabat")
-        self.assertEqual(suite["profile"]["bac"], "Sciences")
+        self.assertEqual(suite["profile"]["bac"], " Sciences ")
 
     def test_corrections_dependantes(self):
         etat = self.remplir("oui")["etat"]

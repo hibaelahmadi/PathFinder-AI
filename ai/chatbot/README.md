@@ -12,6 +12,30 @@ python ai\chatbot\chatbot.py
 
 Python est nécessaire. Aucune bibliothèque externe n'est requise.
 
+### Lancement avec le vocabulaire externe
+
+Depuis la racine du dépôt dans PowerShell, avec l'environnement Gemini déjà
+préparé, remplace le chemin d'exemple par celui de ton fichier JSON :
+
+```powershell
+.\.venv\Scripts\python.exe ai\chatbot\chatbot.py --vocabulaire 'C:\chemin\vers\vocabulaire.json'
+```
+
+Le JSON reste hors du dépôt. Son objet `categories` doit contenir les listes
+de codes textuels uniques `required_subjects`, `interests`, `skills` et
+`career_paths`. Elles sont transmises à `main()` comme matières, intérêts,
+compétences et métiers. Les autres métadonnées du fichier sont ignorées.
+Un fichier absent, illisible ou mal formé provoque un message indiquant son
+chemin et arrête le lancement avant toute question ou sauvegarde.
+Sans `--vocabulaire`, le lancement précédent est conservé.
+
+Cette option concerne uniquement le terminal et ne modifie pas le contrat P2.
+Les codes provisoires restent à valider. Les extractions utilisent Gemini si
+sa configuration et ses dépendances sont disponibles ; sinon le parcours
+continue avec des catégories non renseignées. Aucune bibliothèque externe
+n'est nécessaire pour le parcours classique. Le profil local est toujours
+sauvegardé uniquement après confirmation, à l'emplacement décrit ci-dessous.
+
 ## Tests
 
 Depuis la racine du dépôt :
@@ -157,13 +181,166 @@ resultat = traiter_questionnaire(
 # La prochaine question réelle est ville_souhaitee, pas mobilite.
 ```
 
-`traiter_questionnaire(etat, action, reponse=None)` est une fonction publique
+`traiter_questionnaire(etat, action, reponse=None, *, inclure_budget_type=False, matieres=None, enrichir_profil=False, codes_interets=None, codes_competences=None, codes_metiers=None)` est une fonction publique
 **synchrone** : appel direct, sans `await`. Elle réutilise `traiter_reponse`
 et `corriger_reponse`. Aucun accès à une base, aucune sauvegarde, aucun
-`input`/`print` et aucun appel LLM ne sont effectués. Le terminal conserve son
+`input`/`print` ne sont effectués. Par défaut, aucun appel LLM n'est effectué ;
+l'enrichissement optionnel décrit ci-dessous utilise Gemini. Le terminal conserve son
 fonctionnement actuel et n'utilise pas cet adaptateur.
 
+### Mode optionnel budget et type d'établissement
+
+Le mode `inclure_budget_type` est **désactivé par défaut**. Avec `True`,
+l'adaptateur demande `budget_annuel_max`, puis `type_etablissement`, après
+`competences_declarees` et avant la confirmation. Les notes utilisent le
+paramètre indépendant `matieres` décrit ci-dessous ; les catégories ne sont
+pas ajoutées à ce parcours.
+
+P2 doit conserver le même réglage à chaque appel d'une même session :
+`start`, `answer`, `correct`, `confirm` et `reopen`. Ce réglage est géré par
+l'appelant ; il n'est pas stocké dans `etat` et la structure de retour reste
+inchangée. Exemple depuis la racine du dépôt :
+
+```python
+from ai.chatbot.questionnaire import traiter_questionnaire
+
+mode_budget_type = True  # Réglage conservé pour toute la session côté P2.
+resultat = traiter_questionnaire(
+    None, "start", inclure_budget_type=mode_budget_type,
+)
+resultat = traiter_questionnaire(
+    resultat["etat"], "answer",
+    {"question_code": "bac", "answer_text": "Sciences mathématiques"},
+    inclure_budget_type=mode_budget_type,
+)
+# Continuer avec les codes de resultat["next_question"], dans l'ordre.
+# Garder inclure_budget_type=mode_budget_type pour tous les appels suivants.
+```
+
+La saisie et la correction réutilisent les validateurs existants : budget
+annuel de scolarité en DH positif ou nul (hors inscription, logement et
+transport), type `public`, `privé`/`prive` ou sans préférence. Une réponse vide
+donne `None` (`null` en JSON), `0` reste un nombre et `privé` devient `prive`.
+Le texte original est conservé dans `answer_text` ; la valeur validée est
+recalculée dans `answer_value` et le profil, sans faire confiance à celle
+envoyée par le client. Une erreur préserve l'état initial.
+
+Après les deux réponses, la session reste `in_progress` et non confirmée
+jusqu'à `confirm`. Une ancienne session `completed` sans ces réponses reste
+lisible et confirmée, même avec le mode activé. Après `reopen` avec ce mode,
+les deux questions sont proposées et une nouvelle confirmation est nécessaire.
+
+### Notes facultatives par matière pour P2
+
+Le paramètre optionnel `matieres` reçoit une liste ordonnée de codes textuels
+uniques et non vides. Sans liste (`None` ou `[]`), le parcours reste inchangé.
+P2 doit fournir **la même liste, dans le même ordre, à chaque appel de la
+session**, y compris pour `correct`, `confirm` et `reopen`. La liste n'est pas
+stockée dans l'état. Les vrais codes restent à valider avec P4/P5.
+
+```python
+matieres_session = ["matiere_fictive_a", "matiere_fictive_b"]  # Exemple de test.
+resultat = traiter_questionnaire(None, "start", matieres=matieres_session)
+# À chaque appel suivant, garder matieres=matieres_session.
+# Après les autres questions, next_question proposera note:matiere_fictive_a,
+# puis note:matiere_fictive_b.
+```
+
+Convention de code stable : `note:<code_matiere>`, par exemple
+`note:mathematiques` pour le code matière `mathematiques`. Ce code identifie
+la réponse dans `etat.answers`, `next_question` et `answers_to_save`. Le texte
+officiel de la question est construit par le module, jamais fourni par le client.
+Ces questions arrivent après le parcours existant, donc après le budget et
+le type si leur mode est activé, et avant la confirmation.
+
+`answer` respecte l'ordre des matières ; `correct` exige une question déjà
+traitée. Les deux actions utilisent `valider_note()` : nombre fini entre
+0 et 20 inclus, virgule ou point décimal. `answer_text` conserve exactement
+la saisie ; `answer_value` contient le nombre validé, ou `None` pour une
+réponse vide. Une valeur structurée envoyée par le client est ignorée.
+
+Une réponse vide, y compris par correction pour effacer une note, conserve
+l'entrée de réponse avec `answer_value: null` : la question reste traitée.
+Elle omet la matière de `profile.notes`. Il s'agit d'une réponse actualisée
+dans `answers_to_save`, pas d'une suppression dans `answer_codes_to_delete`.
+Le profil regroupe uniquement les notes renseignées, par exemple
+`"notes": {"mathematiques": 0.0}` ; si aucune note n'est renseignée,
+`"notes": null`. Les clés `note:...` ne sont pas ajoutées au profil.
+
+La dernière réponse ne confirme pas le profil : `confirm` reste nécessaire.
+Une session confirmée se relit avec la même liste. Une ancienne session
+confirmée sans aucune réponse de note reste confirmée ; après `reopen`,
+les matières fournies deviennent des questions à traiter.
+
+### Enrichissement optionnel à la confirmation pour P2
+
+Le paramètre `enrichir_profil=False` conserve le comportement actuel.
+P2 peut activer explicitement les extractions lors de `confirm` en fournissant
+les listes de codes autorisés (exemple avec des codes fictifs) :
+
+```python
+resultat = traiter_questionnaire(
+    etat, "confirm",
+    inclure_budget_type=True,  # Garder le réglage choisi pour cette session.
+    matieres=matieres_session,  # Garder la liste choisie pour cette session.
+    enrichir_profil=True,
+    codes_interets=["interet_fictif"],
+    codes_competences=["competence_fictive"],
+    codes_metiers=["metier_fictif"],
+)
+```
+
+Seule une confirmation valide déclenche les extractions : au maximum un appel
+par champ, sans nouvelle question ni relance. L'appel reste synchrone et peut
+attendre Gemini. La configuration et les dépendances Gemini existantes sont
+nécessaires pour obtenir ces propositions.
+
+Le profil confirmé reçoit `categories_interets` (liste de codes ou `null`),
+`categories_competences` (liste de codes ou `null`) et `code_metier` (un code
+ou `null`), avec les mêmes types que dans le terminal. Les listes autorisées
+sont vérifiées par les fonctions d'extraction Python existantes. Une liste
+absente, une réponse vide, une extraction incertaine ou un échec laisse le
+champ concerné à `null`, sans empêcher la confirmation ni les autres extractions.
+
+Le calcul utilise les derniers `answer_text` : intérêts et précision actuelle,
+compétences déclarées et objectif. Les originaux dans `etat.answers` restent
+intacts. Après `reopen`, correction et nouvelle confirmation activée, les
+trois champs sont recalculés ; aucune ancienne proposition n'est réutilisée.
+Les réponses corrigées suivent toujours les règles de validation habituelles.
+
+Ces champs enrichissent uniquement l'instantané `profile` renvoyé par cette
+confirmation. Ils ne sont pas ajoutés à `etat.answers` ni à `answers_to_save`.
+P2 doit persister le profil enrichi s'il souhaite le relire : une action
+ultérieure ne recharge pas ces propositions et une seconde action `confirm`
+sur une session déjà `completed` reste refusée, sans appel Gemini.
+
 ### Entrées
+
+#### Série Sciences mathématiques A/B
+
+Le terminal et l'adaptateur ajoutent `code_bac` au profil :
+`sciences_mathematiques_a`, `sciences_mathematiques_b` ou `null` (draft-1).
+La réponse initiale reste dans `bac`, avec son texte original lorsqu'elle
+est renseignée ; une réponse vide conserve la convention `null`.
+Dans l'état P2, `answers.bac.answer_text` conserve toujours la saisie exacte,
+et `answer_value` conserve la série normalisée, pas le code A/B.
+
+Une mention A/B explicite suffit. Pour « Sciences mathématiques » sans
+précision, `next_question` propose `precision_bac` immédiatement après `bac`,
+avant la ville. Répondre via `answer` avec A, B, un libellé explicite,
+« je ne sais pas » ou une chaîne vide. Une précision traitée mais inconnue
+reste dans `answers` avec `answer_value: null` et n'est pas redemandée.
+Une saisie ambiguë à cette question est refusée sans changer l'état.
+
+Une modification du bac supprime l'ancienne `precision_bac`, signalée dans
+`answer_codes_to_delete`, et recalcule `code_bac`. Si la nouvelle série reste
+générale, une nouvelle précision est nécessaire. Le terminal reprend aussi
+ce parcours depuis son menu de correction du bac. Aucun appel Gemini n'est
+nécessaire. Aucun autre code de série n'est déduit.
+
+Les anciennes sessions `completed` sans précision restent lisibles et
+confirmées, avec `code_bac: null` pour une série générale. Après `reopen`,
+la précision manquante est demandée avant une nouvelle confirmation.
 
 `answers` est un **dictionnaire indexé par question_code**, conformément au
 contrat P2. `reponse` est un dictionnaire pour `answer` et `correct`.
