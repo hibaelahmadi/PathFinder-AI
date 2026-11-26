@@ -218,4 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+ai/chatbot/profil_test.json
+
 .idea/
