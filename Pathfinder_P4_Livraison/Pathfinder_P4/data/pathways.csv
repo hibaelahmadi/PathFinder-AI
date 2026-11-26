@@ -1,6 +1,0 @@
-﻿pathway_id,title,steps,source_ids,status,notes
-route-ingenieur,Préparation intégrée puis ingénierie,"[""Baccalauréat"", ""Cycle préparatoire intégré"", ""Cycle ingénieur et spécialisation""]","[""s02"", ""s07"", ""ENAM""]",structure_generale,Admission initiale et orientation interne sous conditions. Pas de spécialité garantie dès le bac.
-route-cpge,CPGE puis concours,"[""Baccalauréat"", ""CPGE"", ""Concours adapté à la filière"", ""École selon affectation""]","[""CPGE""]",structure_generale,Ne pas confondre le CNC après CPGE avec le concours post-bac ENSA.
-route-licence,Licence puis poursuite,"[""Baccalauréat"", ""Licence"", ""Candidature à un master ou une passerelle documentée""]","[""s14""]",possibilite_generale,Aucune admission automatique ni master précis confirmé.
-route-court,Formation courte professionnelle,"[""Baccalauréat"", ""Formation DUT, BTS ou technicien spécialisé selon admission"", ""Emploi ou candidature à une poursuite compatible""]","[""s03"", ""OFPPT-DIG""]",illustratif,Ces diplômes sont distincts. Aucune équivalence automatique ni poursuite garantie.
-route-agronomie,Agronomie ENA Meknès,"[""Baccalauréat"", ""Préparation intégrée de deux ans"", ""Cycle ingénieur de trois ans, spécialisation interne""]","[""ENAM""]",structure_generale,Sélection et choix de spécialité à vérifier.

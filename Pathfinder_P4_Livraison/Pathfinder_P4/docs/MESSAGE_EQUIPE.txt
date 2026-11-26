@@ -1,7 +1,0 @@
-Bonjour, voici la livraison P4 de Pathfinder : catalogue Excel, données JSON/CSV, base SQLite, import PostgreSQL, corpus sourcé, index vectoriel local et module RAG/API avec tests.
-
-Commencez par README.md puis docs/INTEGRATION.md. Pour l’affichage par défaut, utilisez programs_exploration.json ou GET /api/v1/programs. programs.json contient aussi l’historique et les cycles après bac+2/+3 : il ne faut pas l’afficher intégralement comme une liste d’admissions post-bac ouvertes.
-
-annual_cost correspond uniquement à la scolarité annuelle en MAD. Les valeurs inconnues restent null. Les tags de matching sont provisoires à valider par P5. Les scores de compatibilité restent à calculer par P5. Aucune admission 2026–2027 n’est déclarée intégralement validée; les sources et statuts doivent rester visibles dans l’interface.
-
-Le module est testé localement. L’adaptation au schéma existant de P2 et la connexion au LLM de P3 restent des opérations d’intégration de l’équipe.
