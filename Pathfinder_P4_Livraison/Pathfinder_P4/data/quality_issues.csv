@@ -1,9 +1,0 @@
-﻿issue_id,severity,detail,impact
-Q01,limite,Registres non exhaustifs pour 2026–2027; écoles fermées/renommées possibles dans accréditations.,Pas de badge admission vérifiée.
-Q02,limite,Tarifs annuels non vérifiés : annual_cost=null partout.,Inconnu ne vaut pas gratuit; comparer sans conclure sur le budget.
-Q03,limite,Séries de bac non normalisées faute de sources de campagne.,accepted_bac_types=null; ne pas exclure automatiquement.
-Q04,limite,"Intérêts, compétences et pistes métiers issus de règles éditoriales transparentes.",Validation P5 requise; pas de prérequis d’admission.
-Q05,limite,Université UIC / réseau EMSI du premier lot non résolus en campus.,Afficher portée réseau; ne pas utiliser ville inconnue pour filtre strict.
-Q06,limite,Ville des composantes UNI héritée du rattachement.,Ne pas l’utiliser comme localisation certaine du campus.
-Q07,limite,"Registre d’accréditation intégral transcrit automatiquement, contrôles structurels et échantillon vérifiés; pas de double saisie humaine.",Relire la ligne officielle avant décision administrative.
-Q08,conflit,13 fiches avec mentions concurrentes de même année; exclues des suggestions.,Consulter l’historique avant publication.
