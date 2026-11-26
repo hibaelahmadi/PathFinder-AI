@@ -10,6 +10,11 @@ dependencies = [
     "psycopg[binary]",
     "pydantic-settings",
     "alembic",
+    "pwdlib[argon2]",
+    "PyJWT",
+    "email-validator",
+    "numpy>=1.24,<3",
+    "scipy>=1.10,<2",
 ]
 
 [project.optional-dependencies]
@@ -17,11 +22,16 @@ dev = [
     "pytest",
     "httpx",
 ]
+gemini = ["google-genai==3.3.0", "python-dotenv==1.2.4"]
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["app", "app.*"]
+where = [".", "..", "../Pathfinder_P4_Livraison/Pathfinder_P4/src"]
+include = [
+    "app", "app.*", "ai", "ai.chatbot", "ai.chatbot.*",
+    "ai.recommendation", "ai.recommendation.*",
+    "pathfinder_p4", "pathfinder_p4.*",
+]
