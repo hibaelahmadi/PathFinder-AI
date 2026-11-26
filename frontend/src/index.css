@@ -1,0 +1,106 @@
+
+@import "tailwindcss";
+
+/* =================================
+   1. DESIGN TOKENS
+   ================================= */
+
+:root {
+  /* Brand colors */
+  --primary: #147d64;
+  --primary-dark: #10634f;
+  --primary-light: #e8f5f0;
+
+  /* Backgrounds */
+  --background: #f5f8f7;
+  --surface: #ffffff;
+
+  /* Text */
+  --text-primary: #1f2937;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  /* Borders and effects */
+  --border: #e5eae8;
+  --shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+
+  /* Shape */
+  --radius-card: 14px;
+  --radius-button: 9px;
+}
+
+/* =================================
+   2. GLOBAL RESET
+   ================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+
+  font-family: Inter, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+
+  color: var(--text-primary);
+  background: var(--background);
+}
+
+/* =================================
+   3. DEFAULT ELEMENT STYLES
+   ================================= */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* =================================
+   4. ACCESSIBILITY
+   ================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+/* =================================
+   5. APPLICATION ROOT
+   ================================= */
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
