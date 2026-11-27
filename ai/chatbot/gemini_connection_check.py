@@ -1,7 +1,11 @@
 """Test manuel isolé : une seule requête Gemini, sans nouvelle tentative."""
 
 import logging
-from pathlib import Path
+
+if __package__:
+    from .gemini_config import charger_cle_gemini
+else:
+    from gemini_config import charger_cle_gemini
 
 
 MODEL = "gemini-3.5-flash-lite"
@@ -12,7 +16,6 @@ def main():
     # Aucune erreur brute ni journal HTTP ne doit révéler des identifiants.
     logging.disable(logging.CRITICAL)
     try:
-        from dotenv import dotenv_values
         from google import genai
         from google.genai import errors, types
     except ImportError:
@@ -20,14 +23,7 @@ def main():
         return 1
 
     try:
-        chemin = Path(__file__).resolve().parents[2] / ".env"
-        # Lecture seule, sans interpolation ni modification de l'environnement.
-        cle = dotenv_values(chemin, interpolate=False, encoding="utf-8-sig").get(
-            "GEMINI_API_KEY"
-        )
-        if not cle or not cle.strip():
-            print("GEMINI_API_KEY absente ou vide dans le .env racine. Aucun appel effectué.")
-            return 1
+        cle = charger_cle_gemini()
         with genai.Client(
             api_key=cle,
             enterprise=False,

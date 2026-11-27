@@ -2,7 +2,11 @@
 
 import json
 import logging
-from pathlib import Path
+
+if __package__:
+    from .gemini_config import charger_cle_gemini
+else:
+    from gemini_config import charger_cle_gemini
 import re
 
 
@@ -68,16 +72,10 @@ def _valider(texte):
 
 
 def _generer(texte):
-    from dotenv import dotenv_values
     from google import genai
     from google.genai import types
 
-    cle = dotenv_values(
-        Path(__file__).resolve().parents[2] / ".env",
-        interpolate=False, encoding="utf-8-sig",
-    ).get("GEMINI_API_KEY")
-    if not cle or not cle.strip():
-        raise ValueError("Configuration absente")
+    cle = charger_cle_gemini()
     with genai.Client(
         api_key=cle, enterprise=False,
         http_options=types.HttpOptions(
