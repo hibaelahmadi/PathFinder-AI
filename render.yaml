@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: pathfinder-api
+    branch: develop
+    runtime: python
+    plan: free
+    buildFilter:
+      paths:
+        - backend/**
+        - ai/**
+        - Pathfinder_P4_Livraison/**
+        - render.yaml
+        - .python-version
+        - .gitattributes
+    # Keep the repository root: backend packaging also uses ai/ and P4 files.
+    buildCommand: cd backend && python -m pip install -e .
+    # Single-instance setup. Paid services can move Alembic to preDeployCommand.
+    startCommand: cd backend && python -m alembic upgrade head && exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health/ready
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: QUESTIONNAIRE_ENRICH_PROFILE
+        value: "false"

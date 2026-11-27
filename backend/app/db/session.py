@@ -17,9 +17,13 @@ database_url = URL.create(
     database=settings.DB_NAME,
 )
 
-engine = create_engine(
-    database_url, pool_pre_ping=True, connect_args={"connect_timeout": 5}
-)
+connect_args: dict[str, int | str] = {"connect_timeout": 5}
+if settings.DB_SSLMODE is not None:
+    connect_args["sslmode"] = settings.DB_SSLMODE
+if settings.DB_SSLROOTCERT is not None:
+    connect_args["sslrootcert"] = settings.DB_SSLROOTCERT
+
+engine = create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
 
 SessionLocal = sessionmaker(
     bind=engine,
