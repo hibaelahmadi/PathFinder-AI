@@ -17,7 +17,9 @@ database_url = URL.create(
     database=settings.DB_NAME,
 )
 
-engine = create_engine(database_url, pool_pre_ping=True)
+engine = create_engine(
+    database_url, pool_pre_ping=True, connect_args={"connect_timeout": 5}
+)
 
 SessionLocal = sessionmaker(
     bind=engine,
