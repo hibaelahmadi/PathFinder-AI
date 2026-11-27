@@ -19,6 +19,7 @@ services:
     healthCheckPath: /health/ready
     envVars:
       - key: DB_HOST
+        # Neon direct hostname for both startup migrations and this one-instance API.
         sync: false
       - key: DB_PORT
         value: "5432"
@@ -29,6 +30,8 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSLMODE
+        value: require
+      - key: DB_CHANNEL_BINDING
         value: require
       - key: JWT_SECRET_KEY
         generateValue: true

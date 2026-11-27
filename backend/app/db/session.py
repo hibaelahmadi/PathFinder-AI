@@ -22,6 +22,8 @@ if settings.DB_SSLMODE is not None:
     connect_args["sslmode"] = settings.DB_SSLMODE
 if settings.DB_SSLROOTCERT is not None:
     connect_args["sslrootcert"] = settings.DB_SSLROOTCERT
+if settings.DB_CHANNEL_BINDING is not None:
+    connect_args["channel_binding"] = settings.DB_CHANNEL_BINDING
 
 engine = create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
 

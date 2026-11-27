@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         "disable", "allow", "prefer", "require", "verify-ca", "verify-full"
     ] | None = None
     DB_SSLROOTCERT: str | None = None
+    DB_CHANNEL_BINDING: Literal["disable", "prefer", "require"] | None = None
     JWT_SECRET_KEY: SecretStr = Field(min_length=32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1, le=1440)
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
