@@ -672,6 +672,17 @@ are not available on free web services. Apply migrations once per deployment
 before introducing multiple instances; do not independently migrate from each
 worker. See [Render deployment steps](https://render.com/docs/deploys).
 
+Restart verification: two consecutive `alembic upgrade head` runs on the local
+test database already at head did not replay migrations, change table counts,
+or modify a committed test record. Alembic records applied revisions. The `&&`
+in the start command prevents Uvicorn from starting when a migration fails.
+This does not make concurrent migration runners safe: `--workers 1` limits
+Uvicorn workers, not overlapping deploys or separate services. Keep one
+deployment/migration runner for this initial setup; before scaling, run one
+dedicated migration step before starting instances. Pending/future migrations
+still require review for locks, destructive changes and old/new app compatibility.
+The repeat-run check is local; no migration has yet been executed on Neon.
+
 Set these values in Render's environment, without uploading the local `.env`:
 
 | Variable | Value |
