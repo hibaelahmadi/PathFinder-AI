@@ -2,6 +2,34 @@
 
 This file tracks backend dependencies, missing capabilities, and integration blockers encountered while implementing the PathFinder AI frontend. Per team ownership rules, no backend files are modified by the frontend team.
 
+## Backend verification update — 2026-11-27
+
+Backend review reproduced successful real HTTP calls on Windows, both directly
+at `127.0.0.1:8000` and through the unchanged Vite proxy at
+`127.0.0.1:5173/api`: health/docs/OpenAPI, registration/login/current user,
+catalogue cards fetched in parallel for comparison, pathways, institutions,
+sessions, and sourced evidence. PostgreSQL answered `SELECT 1`; revision
+`c4a812f6d930` is applied and `alembic check` reports no drift.
+
+The proxy configuration and the frontend service paths match the current API.
+The reported WSL `ECONNREFUSED` is consistent with the missing local backend
+environment described in ISSUE-001; successful Windows checks do not establish
+that another developer's WSL environment is configured. Its environment setup
+remains pending verification by that developer. The exact WSL startup procedure
+is now documented in `backend/README.md`, using a separate `.venv-wsl` so an
+existing Windows virtual environment is preserved.
+
+Backend diagnostics now include `GET /health/ready` and sanitized JSON 503
+responses for unavailable PostgreSQL or missing/outdated schema. The complete
+HTTP contract is exported in `backend/openapi.json` for offline inspection.
+No frontend source files were changed during this verification.
+
+ISSUE-002 remains unimplemented pending an admin functionality/permissions
+contract. ISSUE-003 remains optional: the frontend's existing parallel card
+fetches work when the backend is reachable. ISSUE-004 is unchanged: editable
+profiles and confirmed questionnaire snapshots remain separate, and Gemini
+enrichment is optional. These are not causes of proxy-level HTTP 502 errors.
+
 ---
 
 ## ISSUE-001: Local backend server not running / environment not configured (HTTP 502 via Vite proxy)

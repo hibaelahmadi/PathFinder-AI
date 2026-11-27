@@ -61,9 +61,100 @@ From the backend folder:
 ```
 
 - Health endpoint: http://127.0.0.1:8000/health
+- PostgreSQL/migration readiness: http://127.0.0.1:8000/health/ready
 - API documentation: http://127.0.0.1:8000/docs
 
 Press Ctrl+C in the terminal to stop the server.
+
+## WSL Ubuntu setup for the frontend team
+
+The frontend's Vite proxy forwards `/api/*` to `http://127.0.0.1:8000`, removing
+the `/api` prefix. FastAPI must be running in the same reachable environment as
+Vite. A server running on another teammate's computer is not your localhost.
+The reported `ECONNREFUSED 127.0.0.1:8000` means that Vite could not connect to
+its configured target; it occurs before an authentication or catalogue request
+reaches FastAPI. A missing endpoint would instead produce an HTTP API response.
+
+For WSL, first verify `python3 --version` is 3.12 or newer. On a compatible
+Ubuntu installation, install/start PostgreSQL and venv support:
+
+```bash
+sudo apt update
+sudo apt install python3-venv postgresql postgresql-client
+sudo service postgresql start
+```
+
+Create the role/database only if they do not exist:
+
+```bash
+sudo -u postgres createuser --pwprompt pathfinder_app
+sudo -u postgres createdb --owner=pathfinder_app pathfinder_db
+```
+
+From the repository root, create a separate Linux virtual environment. The
+Windows `.venv/Scripts` environment is not a Linux environment; `.venv-wsl`
+allows both to coexist without replacing either one.
+
+```bash
+cd backend
+python3 -m venv .venv-wsl
+.venv-wsl/bin/python -m pip install -e ".[dev]"
+```
+
+Create `.env` from `.env.example` only if it is absent. Configure your own
+PostgreSQL credentials and replace `JWT_SECRET_KEY` with a generated secret:
+
+```bash
+if [ ! -f .env ]; then
+    cp .env.example .env
+fi
+.venv-wsl/bin/python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Use `DB_HOST=127.0.0.1`, `DB_PORT=5432`, `DB_NAME=pathfinder_db`,
+`DB_USER=pathfinder_app`, and your role's password. The JWT secret must contain
+at least 32 characters. Keep `QUESTIONNAIRE_ENRICH_PROFILE=false` initially;
+Gemini is not needed for authentication, catalogue, pathways, or basic sessions.
+Never commit `.env` or send its password/token-signing secret in an issue.
+
+Apply migrations, then keep FastAPI running in its own terminal:
+
+```bash
+.venv-wsl/bin/python -m alembic upgrade head
+.venv-wsl/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Check from another WSL terminal before starting the frontend:
+
+```bash
+curl -i http://127.0.0.1:8000/health
+curl -i http://127.0.0.1:8000/health/ready
+curl -i http://127.0.0.1:8000/openapi.json
+```
+
+`/health` checks the process; `/health/ready` checks PostgreSQL and the applied
+migration. A ready database currently reports revision `c4a812f6d930`.
+`/docs` and `/openapi.json` should respond even before logging in.
+
+In a separate terminal, from the repository root, run the unchanged frontend:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Test `http://127.0.0.1:5173/api/health` (replace 5173 if Vite selected another
+port). Direct FastAPI routes do not have the `/api` prefix. With Vite's default
+`VITE_API_URL` fallback of `/api`, no frontend source change is needed.
+If `VITE_API_URL` is overridden, it must match the intended backend address.
+For direct browser-to-backend calls, configure `CORS_ORIGINS` with the exact
+frontend origin, including `localhost` versus `127.0.0.1` and its port.
+
+If backend and Vite run in different OS/container environments, verify the
+connection from the terminal running Vite. Do not assume that its loopback
+address reaches the other environment. The straightforward local setup is to
+run both processes and PostgreSQL inside WSL, as above.
 
 ## Current functionality
 
@@ -497,3 +588,51 @@ UTF-8 mode avoids a Windows encoding mismatch in P4's temporary HTML test fixtur
 Backend pytest and PostgreSQL test instructions are above. P1's actual UI flow,
 live Gemini behavior, and recommendation relevance still need the team review
 before release; these are separate from the verified local backend handoff.
+
+## Startup diagnostics and current limitations
+
+| Check | Expected result | Meaning if it fails |
+|---|---|---|
+| GET /health | 200, `{"status":"ok"}` | Process/port is unreachable or the wrong server is targeted |
+| GET /health/ready | 200 with database and migration | 503 explains a database or migration problem |
+| GET /docs and /openapi.json | 200 | Backend startup/import/configuration must be checked |
+| GET /api/health through Vite | 200 | If direct health works, investigate the proxy target/environment |
+| POST /auth/login | 200 for valid credentials, 401 for invalid ones | 422 means the JSON input is invalid; 503 means PostgreSQL/schema is unavailable |
+
+Database connection failures return JSON with a human-readable `detail`, and
+connection attempts time out after five seconds. Missing tables/columns or
+outdated migrations return 503 with migration instructions. Credentials and raw
+SQL/database errors are not included in responses. Existing 401/404/409/422
+responses remain unchanged. Validation responses contain `loc`, `msg`, and
+`type`, without echoing submitted passwords.
+
+The complete current contract is also exported as `backend/openapi.json`,
+so request/response schemas can be inspected before a local server is running.
+This is a generated snapshot; the running `/openapi.json` remains authoritative.
+
+Current boundaries:
+
+- No `/admin/*` HTTP operations are implemented. Roles are stored and returned,
+  and registration cannot self-promote to admin. Admin operations need a defined
+  permission/functionality contract before implementation.
+- No batch HTTP comparison endpoint is implemented. The frontend currently
+  compares parallel `GET /catalogue/programs/{program_id}` responses; those calls
+  were verified through Vite. The existing P4 Python comparison helper remains
+  available to its owners.
+- No PUT or DELETE routes, refresh-token, or password-reset endpoints exist.
+- `/profiles/me` remains separate from confirmed questionnaire snapshots.
+- PostgreSQL numeric catalogue routes may return empty lists until P4 imports
+  data into those tables. The delivered dataset is available under `/catalogue`
+  (87 exploration programs, 633 institutions, 16 careers, 40 sources, 5 pathways).
+- An account created in one developer's database does not exist in another
+  developer's database. Create a fictional student using `/auth/register` in
+  each local environment; no personal account is needed for frontend tests.
+- No shared public deployment is configured. Local verification on Windows does
+  not establish that another teammate's WSL environment is configured.
+
+Verified on 2026-11-27 with real HTTP requests, both directly on port 8000 and
+through the unchanged Vite proxy on port 5173: register/login/me, health/docs,
+readiness, program cards fetched in parallel, catalogue/pathways, session
+creation/reading/answering, sourced evidence, and expected error responses.
+A fictional student account was created locally; the temporary verification
+session was removed. No frontend source files were changed.
